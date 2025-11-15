@@ -1,0 +1,34 @@
+import groovy.json.JsonSlurper
+
+ext {
+    getNpmVersion = {
+        try {
+            def packageJsonFile = new File("$projectDir/../package.json")
+            if (!packageJsonFile.exists()) {
+                println "package.json not found at: ${packageJsonFile.absolutePath}"
+                return "1.0.0"
+            }
+
+            def slurper = new JsonSlurper()
+            def packageJson = slurper.parse(packageJsonFile)
+            println "Found version in package.json: ${packageJson.version}"
+            return packageJson.version
+        } catch (Exception e) {
+            println "Error parsing package.json: ${e.message}"
+            return "1.0.0"
+        }
+    }
+
+    getNpmVersionCode = {
+        try {
+            def version = getNpmVersion()
+            def (major, minor, patch) = version.tokenize('.')
+            def versionCode = major.toInteger() * 10000 + minor.toInteger() * 100 + patch.toInteger()
+            println "Calculated versionCode: $versionCode from version: $version"
+            return versionCode
+        } catch (Exception e) {
+            println "Error calculating versionCode: ${e.message}"
+            return 1
+        }
+    }
+}
