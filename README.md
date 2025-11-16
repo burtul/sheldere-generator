@@ -269,41 +269,16 @@ The app works completely offline once loaded. All schedule data is stored locall
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Подробное руководство по устранению проблем
 - [ANDROID_SETUP.md](./ANDROID_SETUP.md) - Полная инструкция по настройке
 
-## Mobile App Installation (PWA)
-
-### iOS
-1. Open the app in Safari
-2. Tap the Share button
-3. Tap "Add to Home Screen"
-
-### Android (PWA)
-1. Open the app in Chrome
-2. Tap the menu button (three dots)
-3. Tap "Install app" or "Add to Home screen"
-
-## Technical Stack
-
-- **Framework**: Next.js 16 with App Router
-- **Styling**: Tailwind CSS v4
-- **State Management**: React Hooks with LocalStorage
-- **Icons**: Lucide React
-- **Mobile**: Capacitor for Android/iOS
-- **Deployment**: Optimized for Vercel and Android APK
-
-## Browser Support
-
-- Chrome/Edge: Latest 2 versions
-- Firefox: Latest 2 versions
-- Safari: Latest 2 versions
-- Mobile browsers: iOS Safari 14+, Chrome Android
-
-## Tips
-
-- Use the "Auto" button in monthly settings to automatically calculate target hours based on weekdays
-- Click on shift days to add notes for special circumstances
-- Generate schedule for 3+ years to have plenty of planning time
-- The app syncs data instantly to LocalStorage - no manual saving needed
-
-## License
+****
 
 MIT
+## 📦 Сборка проекта
+
+### Интерактивный сборщик
+[🚀 Открыть сборщик проектов](build.html) - выберите тип сборки и получите инструкции
+
+### 🔧 Режим разработки
+```bash
+# Установка зависимостей и запуск dev-сервера
+npm install --legacy-peer-deps
+npm run dev
