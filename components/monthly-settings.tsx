@@ -34,7 +34,7 @@ export function MonthlySettingsModal({ month, settings, onSave, onClose, workDay
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-card rounded-lg p-6 border border-border max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Настрройки для {month}</h3>
+          <h3 className="text-lg font-semibold text-foreground">Настройки {month}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
           </button>

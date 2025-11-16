@@ -119,7 +119,7 @@ const handleAddNotification = () => {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Добавить запись ко дню"
+              placeholder="Добавить запись к дню"
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground resize-none text-sm"
               rows={3}
             />
