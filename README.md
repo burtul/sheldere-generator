@@ -40,6 +40,7 @@ A modern web application for managing 2/2 shift rotations with automatic schedul
 
 Убедись, что в AndroidManifest.xml прописано:
 
+
 xml
 android:icon="@mipmap/ic_launcher"
 android:roundIcon="@mipmap/ic_launcher_round"
@@ -191,45 +192,6 @@ npm run build
 npm run start
 \`\`\`
 
-## Usage
-
-### Generate Schedule
-1. Click "Generate Schedule" panel on the right
-2. Select your start date
-3. Choose which shift to start with
-4. Set the number of years to generate
-5. Click "Generate Schedule"
-
-### Edit Shifts
-1. Click on any date in the calendar
-2. A shift editor modal will open
-3. Change shift type (Day/Night/Off) or hours worked
-4. Add optional notes
-5. Click "Save"
-
-### Monthly Settings
-1. Click "Settings" button on any month
-2. Choose colors for day and night shifts
-3. Set target hours for the month or use "Auto" to calculate based on workdays
-4. Click "Save Settings"
-
-### View Progress
-- Monthly progress cards show hours worked vs. target
-- Visual progress bar indicates completion
-- Status icons show if you're on track
-
-## Data Storage
-
-All data is stored locally in your browser using LocalStorage. Your schedule is automatically saved whenever you make changes and will persist even if you close and reopen the app.
-
-## Offline Usage
-
-The app works completely offline once loaded. All schedule data is stored locally, and the service worker ensures the app loads even without internet connection.
-
-## Android App
-
-Приложение можно собрать как нативное Android приложение с помощью Capacitor.
-
 ### Быстрый старт
 
 1. Установите зависимости:
@@ -280,12 +242,7 @@ MIT
 # Решение для Windows:
 taskkill /f /im node.exe
 rm -f .next/dev/lock
-npm run dev
-
-### Интерактивный сборщик
-[🚀 Открыть сборщик проектов](build.html) - выберите тип сборки и получите инструкции
-
-
+npm run dev 
 ### 🔧 Режим разработки
 ```bash
 # Установка зависимостей и запуск dev-сервера
