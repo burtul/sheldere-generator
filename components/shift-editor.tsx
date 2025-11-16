@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import type { Shift, ShiftType, Notification } from "@/lib/types"
 import { X, Plus, Trash2 } from "lucide-react"
@@ -10,7 +10,7 @@ interface ShiftEditorProps {
   shift: Shift | null
   onSave: (shift: Shift) => void
   onClose: () => void
-  formattedDate: string // Добавляем пропс с отформатированной датой
+  formattedDate: string
 }
 
 export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: ShiftEditorProps) {
@@ -21,6 +21,32 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
   const [notifications, setNotifications] = useState<Notification[]>(shift?.notifications || [])
   const [showNotificationForm, setShowNotificationForm] = useState(false)
   const [newNotifTime, setNewNotifTime] = useState("09:00")
+
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // Обработчик клика вне модального окна
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose()
+      }
+    }
+
+    // Обработчик Escape клавиши
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose()
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [onClose])
 
   const handleSave = () => {
     onSave({
@@ -93,15 +119,20 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg p-6 border border-border max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        ref={modalRef}
+        className="bg-card rounded-lg p-6 border border-border max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-foreground">Редактирование графика</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Используем готовый formattedDate вместо dateDisplay */}
         <p className="text-sm text-muted-foreground mb-4">{formattedDate}</p>
 
         <div className="space-y-4">
