@@ -15,8 +15,8 @@ interface ShiftEditorProps {
 
 export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: ShiftEditorProps) {
   const [shiftType, setShiftType] = useState<ShiftType>(shift?.type || "day")
-  const [hours, setHours] = useState(shift?.hours || 12)
-  const [hoursInput, setHoursInput] = useState(String(shift?.hours || 12))
+  const [hours, setHours] = useState(shift?.hours || 0)
+  const [minutes, setMinutes] = useState(shift?.minutes || 0)
   const [notes, setNotes] = useState(shift?.notes || "")
   const [notifications, setNotifications] = useState<Notification[]>(shift?.notifications || [])
   const [showNotificationForm, setShowNotificationForm] = useState(false)
@@ -53,6 +53,7 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
       date,
       type: shiftType,
       hours,
+      minutes,
       notes,
       notifications: notifications.length > 0 ? notifications : undefined,
     })
@@ -78,43 +79,18 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
     setNotifications(notifications.filter((n) => n.id !== id))
   }
 
-  const shiftTypeHours: Record<ShiftType, number> = {
-    day: 12,
-    night: 12,
-    off: 0,
-    offn: 8,
+  const shiftTypeHours: Record<ShiftType, { hours: number; minutes: number }> = {
+    day: { hours: 12, minutes: 0 },
+    night: { hours: 12, minutes: 0 },
+    off: { hours: 0, minutes: 0 },
+    offn: { hours: 8, minutes: 0 },
   }
 
   const handleShiftTypeChange = (type: ShiftType) => {
     setShiftType(type)
-    const newHours = shiftTypeHours[type]
-    setHours(newHours)
-    setHoursInput(newHours === 0 ? "" : String(newHours))
-  }
-
-  const handleHoursFocus = () => {
-    if (hours === 0) {
-      setHoursInput("")
-    }
-  }
-
-  const handleHoursBlur = () => {
-    if (hoursInput === "") {
-      setHours(0)
-      setHoursInput("0")
-    } else {
-      const newHours = Number(hoursInput)
-      setHours(newHours)
-    }
-  }
-
-  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setHoursInput(value)
-
-    if (value !== "") {
-      setHours(Number(value))
-    }
+    const newTime = shiftTypeHours[type]
+    setHours(newTime.hours)
+    setMinutes(newTime.minutes)
   }
 
   return (
@@ -156,17 +132,34 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Отработано часов</label>
-            <input
-              type="number"
-              min="0"
-              max="24"
-              value={hoursInput}
-              onChange={handleHoursChange}
-              onFocus={handleHoursFocus}
-              onBlur={handleHoursBlur}
-              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
-            />
+            <label className="block text-sm font-medium text-foreground mb-2">Отработано времени</label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">Часы</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={hours}
+                  onChange={(e) => setHours(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground mb-1 block">Минуты</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={minutes}
+                  onChange={(e) => setMinutes(Math.min(59, Number(e.target.value)))}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Итого: {hours}ч {minutes > 0 && `${minutes}м`}
+            </p>
           </div>
 
           <div>
