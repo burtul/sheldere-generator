@@ -273,9 +273,18 @@ The app works completely offline once loaded. All schedule data is stored locall
 
 MIT
 ## 📦 Сборка проекта
+## 🚨 Распространенные проблемы
+
+### Ошибка блокировки dev-сервера
+```bash
+# Решение для Windows:
+taskkill /f /im node.exe
+rm -f .next/dev/lock
+npm run dev
 
 ### Интерактивный сборщик
 [🚀 Открыть сборщик проектов](build.html) - выберите тип сборки и получите инструкции
+
 
 ### 🔧 Режим разработки
 ```bash
