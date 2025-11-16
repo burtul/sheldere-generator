@@ -6,15 +6,26 @@ import type { Shift, ShiftType, Notification } from "@/lib/types"
 import { X, Plus, Trash2 } from "lucide-react"
 
 interface ShiftEditorProps {
-  date: string // Changed from Date to string (YYYY-MM-DD format)
+  date: string // YYYY-MM-DD
   shift: Shift | null
   onSave: (shift: Shift) => void
   onClose: () => void
 }
 
+// Обновлённый тип Shift:
+// interface Shift {
+//   date: string
+//   type: ShiftType
+//   hours: number
+//   minutes: number
+//   notes?: string
+//   notifications?: Notification[]
+// }
+
 export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) {
   const [shiftType, setShiftType] = useState<ShiftType>(shift?.type || "day")
-  const [hours, setHours] = useState(shift?.hours || 12)
+  const [hours, setHours] = useState(shift?.hours ?? 12)
+  const [minutes, setMinutes] = useState(shift?.minutes ?? 0)
   const [notes, setNotes] = useState(shift?.notes || "")
   const [notifications, setNotifications] = useState<Notification[]>(shift?.notifications || [])
   const [showNotificationForm, setShowNotificationForm] = useState(false)
@@ -24,42 +35,42 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
     onSave({
       date,
       type: shiftType,
-      hours,
+      hours,     // сохраняем отдельно часы
+      minutes,   // сохраняем отдельно минуты
       notes,
       notifications: notifications.length > 0 ? notifications : undefined,
     })
     onClose()
   }
 
-const handleAddNotification = () => {
-  if (!notes.trim()) return
-
-  const newNotif: Notification = {
-    id: Date.now().toString(),
-    time: newNotifTime,
-    message: notes, // Сохраняем текущий текст
-    createdAt: new Date().toISOString(), // Добавляем timestamp
+  const handleAddNotification = () => {
+    if (!notes.trim()) return
+    const newNotif: Notification = {
+      id: Date.now().toString(),
+      time: newNotifTime,
+      message: notes,
+      createdAt: new Date().toISOString(),
+    }
+    setNotifications([...notifications, newNotif])
+    setNewNotifTime("09:00")
+    setShowNotificationForm(false)
   }
-
-  setNotifications([...notifications, newNotif])
-  setNewNotifTime("09:00")
-  setShowNotificationForm(false)
-}
 
   const handleRemoveNotification = (id: string) => {
     setNotifications(notifications.filter((n) => n.id !== id))
   }
 
-  const shiftTypeHours: Record<ShiftType, number> = {
-    day: 12,
-    night: 12,
-    off: 0,
-    offn: 8,
+  const shiftTypeDefaults: Record<ShiftType, { h: number; m: number }> = {
+    day: { h: 12, m: 0 },
+    night: { h: 12, m: 0 },
+    off: { h: 0, m: 0 },
+    offn: { h: 8, m: 0 },
   }
 
   const handleShiftTypeChange = (type: ShiftType) => {
     setShiftType(type)
-    setHours(shiftTypeHours[type])
+    setHours(shiftTypeDefaults[type].h)
+    setMinutes(shiftTypeDefaults[type].m)
   }
 
   const [year, month, day] = date.split("-").map(Number)
@@ -83,8 +94,8 @@ const handleAddNotification = () => {
         <p className="text-sm text-muted-foreground mb-4">{dateDisplay}</p>
 
         <div className="space-y-4">
+          {/* Тип смены */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2"></label>
             <div className="grid grid-cols-3 gap-2">
               {(["day", "night", "off"] as ShiftType[]).map((type) => (
                 <button
@@ -102,18 +113,46 @@ const handleAddNotification = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Отработано часов</label>
-            <input
-              type="number"
-              min="0"
-              max="24"
-              value={hours}
-              onChange={(e) => setHours(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
-            />
-          </div>
+         {/* Часы и минуты */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Отработано</label>
+              <div className="flex gap-2">
+                {/* Часы */}
+                <input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={hours || ""}
+                  onChange={(e) => {
+                    let val = Number(e.target.value)
+                    if (val < 0) val = 0
+                    if (val > 24) val = 24
+                    setHours(val)
+                  }}
+                  placeholder="Часы"
+                  className="w-1/2 px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                />
 
+                {/* Минуты */}
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={minutes || ""}
+                  onChange={(e) => {
+                    let val = Number(e.target.value)
+                    if (val < 0) val = 0
+                    if (val > 59) val = 59
+                    setMinutes(val)
+                  }}
+                  placeholder="Минуты"
+                  className="w-1/2 px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                />
+              </div>
+            </div>
+
+
+          {/* Запись */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Запись</label>
             <textarea
@@ -125,6 +164,7 @@ const handleAddNotification = () => {
             />
           </div>
 
+          {/* Напоминания */}
           <div className="border-t border-border pt-4">
             <div className="flex justify-between items-center mb-3">
               <label className="text-sm font-medium text-foreground">Напоминание</label>
@@ -147,21 +187,19 @@ const handleAddNotification = () => {
                   onChange={(e) => setNewNotifTime(e.target.value)}
                   className="w-full px-2 py-1 bg-input border border-border rounded text-foreground text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Напоминание не может быть выставлено с пустым полем</p>
                 <div className="flex gap-2">
-
-                <button
-                  onClick={() => setShowNotificationForm(false)}
-                  className="flex-1 px-2 py-1 text-xs bg-muted border border-border rounded hover:bg-muted/80"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={handleAddNotification}
-                  className="flex-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                >
-                  Сохранить
-                </button>
+                  <button
+                    onClick={() => setShowNotificationForm(false)}
+                    className="flex-1 px-2 py-1 text-xs bg-muted border border-border rounded hover:bg-muted/80"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={handleAddNotification}
+                    className="flex-1 px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                  >
+                    Сохранить
+                  </button>
                 </div>
               </div>
             )}
@@ -189,6 +227,7 @@ const handleAddNotification = () => {
             )}
           </div>
 
+          {/* Кнопки */}
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
               Отмена

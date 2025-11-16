@@ -15,7 +15,7 @@ export function ShiftDetailsPanel({ shift, date, onEdit, onDelete }: ShiftDetail
   if (!shift || !date) {
     return (
       <div className="bg-card rounded-lg p-6 border border-border text-center text-muted-foreground">
-        <p>Выберите день для подробностей          </p>
+        <p>Выберите день для подробностей</p>
       </div>
     )
   }
@@ -30,7 +30,7 @@ export function ShiftDetailsPanel({ shift, date, onEdit, onDelete }: ShiftDetail
     day: "Дневная",
     night: "Ночная",
     off: "Выходной",
-    offn:"Отсыпной",
+    offn: "Отсыпной",
   }
 
   return (
@@ -50,7 +50,10 @@ export function ShiftDetailsPanel({ shift, date, onEdit, onDelete }: ShiftDetail
             <Clock className="h-3 w-3" />
             Часы
           </p>
-          <p className="font-semibold text-foreground">{shift.hours}h</p>
+          <p className="font-semibold text-foreground">
+            {shift.hours > 0 ? `${shift.hours}h` : ""}
+            {shift.minutes > 0 ? ` ${shift.minutes}m` : ""}
+          </p>
         </div>
       </div>
 

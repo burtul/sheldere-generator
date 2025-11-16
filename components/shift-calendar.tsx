@@ -62,7 +62,6 @@ export function ShiftCalendar({
 
     if (!shift) return {}
 
-    // Используем инлайн-стили только для CSS переменных
     if (shift.type === "day") {
       return { "--day-color": globalSettings.dayShiftColor } as React.CSSProperties
     } else if (shift.type === "night") {
@@ -80,18 +79,15 @@ export function ShiftCalendar({
   }
 
   const handleDateClick = (dateStr: string) => {
-    // Очищаем предыдущий таймаут, если он есть
     if (clickTimeout) {
       clearTimeout(clickTimeout)
       setClickTimeout(null)
-      // Это двойной клик - открываем редактор
       onDateClick(dateStr)
     } else {
-      // Это первый клик - устанавливаем таймаут
       setSelectedDate(dateStr)
       const timeout = setTimeout(() => {
         setClickTimeout(null)
-      }, 300) // Время для определения двойного клика (300ms)
+      }, 300)
       setClickTimeout(timeout)
     }
   }
@@ -99,23 +95,19 @@ export function ShiftCalendar({
   return (
     <div className="bg-card rounded-lg p-6 border border-border">
       <div className="flex items-center justify-center gap-4 mb-6">
-        {/* Левая стрелка */}
         <Button variant="outline" size="icon" onClick={previousMonth}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {/* Название месяца и информация */}
         <div className="flex flex-col items-center flex-1">
           <h2 className="text-2xl font-bold text-foreground">
             {currentDate.toLocaleString("default", { month: "long", year: "numeric" })}
           </h2>
-          
-          {/* Строка с информацией о дневниках и кнопкой редактирования */}
           <div className="flex items-center gap-2 mt-1">
             <p className="text-sm text-muted-foreground">Дневники: {targetHours} часы</p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onEditMonth(monthKey)}
               className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
             >
@@ -124,7 +116,6 @@ export function ShiftCalendar({
           </div>
         </div>
 
-        {/* Правая стрелка */}
         <Button variant="outline" size="icon" onClick={nextMonth}>
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -155,7 +146,6 @@ export function ShiftCalendar({
                 day ? "hover:border-primary/50 hover:shadow-md bg-card" : "bg-muted/20",
                 selectedDate === dateStr && "ring-2 ring-primary",
                 shift?.notes ? "border-4 border-accent" : "border-border",
-                // Динамические классы для смен
                 shift?.type === "day" && "bg-[var(--day-color)]",
                 shift?.type === "night" && "bg-[var(--night-color)]",
                 (shift?.type === "day" || shift?.type === "night") && "text-white"
@@ -167,18 +157,25 @@ export function ShiftCalendar({
                   <span
                     className={cn(
                       "text-sm font-semibold",
-                      shift?.type === "off" ? "text-muted-foreground" : 
-                      (shift?.type === "day" || shift?.type === "night") ? "text-white" : "text-foreground"
+                      shift?.type === "off"
+                        ? "text-muted-foreground"
+                        : (shift?.type === "day" || shift?.type === "night")
+                        ? "text-white"
+                        : "text-foreground"
                     )}
                   >
                     {day}
                   </span>
-                  {shift && shift.type !== "off" && (
-                    <span className={cn(
-                      "text-xs font-medium",
-                      (shift?.type === "day" || shift?.type === "night") ? "text-white/90" : "text-foreground/70"
-                    )}>
-                      {shift.hours}h
+                  {shift && (shift.hours > 0 || shift.minutes > 0) && (
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        (shift?.type === "day" || shift?.type === "night")
+                          ? "text-white/90"
+                          : "text-foreground/70"
+                      )}
+                    >
+                      {shift.hours}h {shift.minutes > 0 && `${shift.minutes}m`}
                     </span>
                   )}
                 </>
