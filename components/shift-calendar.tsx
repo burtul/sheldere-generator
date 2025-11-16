@@ -12,6 +12,8 @@ interface ShiftCalendarProps {
   globalSettings: GlobalSettings
   onDateClick: (date: string) => void
   onEditMonth: (month: string) => void
+  selectedDate: string | null // Добавляем пропс для выбранной даты
+  onDateSelect: (date: string | null) => void // Колбэк для выбора даты
 }
 
 export function ShiftCalendar({
@@ -20,9 +22,10 @@ export function ShiftCalendar({
   globalSettings,
   onDateClick,
   onEditMonth,
+  selectedDate, // Получаем выбранную дату из пропсов
+  onDateSelect, // Получаем колбэк для выбора даты
 }: ShiftCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const year = currentDate.getFullYear()
@@ -48,10 +51,14 @@ export function ShiftCalendar({
 
   const previousMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1))
+    // Сбрасываем выбранную дату при смене месяца
+    onDateSelect(null)
   }
 
   const nextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1))
+    // Сбрасываем выбранную дату при смене месяца
+    onDateSelect(null)
   }
 
   const getShiftStyle = (day: number | null) => {
@@ -80,11 +87,13 @@ export function ShiftCalendar({
 
   const handleDateClick = (dateStr: string) => {
     if (clickTimeout) {
+      // Двойной клик - открываем редактор
       clearTimeout(clickTimeout)
       setClickTimeout(null)
       onDateClick(dateStr)
     } else {
-      setSelectedDate(dateStr)
+      // Одиночный клик - выбираем дату
+      onDateSelect(dateStr)
       const timeout = setTimeout(() => {
         setClickTimeout(null)
       }, 300)
@@ -131,6 +140,7 @@ export function ShiftCalendar({
         {days.map((day, idx) => {
           const shift = getShiftInfo(day)
           const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null
+          const isSelected = selectedDate === dateStr // Используем переданный selectedDate
 
           return (
             <div
@@ -144,7 +154,7 @@ export function ShiftCalendar({
                 "aspect-square rounded-lg p-2 cursor-pointer transition-all relative",
                 "flex flex-col justify-center items-center border",
                 day ? "hover:border-primary/50 hover:shadow-md bg-card" : "bg-muted/20",
-                selectedDate === dateStr && "ring-2 ring-primary",
+                isSelected && "ring-2 ring-primary", // Используем isSelected для выделения
                 shift?.notes ? "border-4 border-accent" : "border-border",
                 shift?.type === "day" && "bg-[var(--day-color)]",
                 shift?.type === "night" && "bg-[var(--night-color)]",

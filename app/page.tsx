@@ -17,9 +17,9 @@ import { Settings2, Calendar } from "lucide-react"
 export default function Dashboard() {
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null)
   const [editingMonth, setEditingMonth] = useState<string | null>(null)
-  const [editingGlobalSettings, setEditingGlobalSettings] = useState(false) // added state for global settings modal
+  const [editingGlobalSettings, setEditingGlobalSettings] = useState(false)
   const [editingDate, setEditingDate] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null) // Изменено на string
   const [loading, setLoading] = useState(true)
 
   // Load data on mount and register service worker
@@ -37,7 +37,6 @@ export default function Dashboard() {
         shifts,
         monthlySettings,
         globalSettings: {
-          // initialize global settings
           dayShiftColor: defaultColors.dayShift,
           nightShiftColor: defaultColors.nightShift,
         },
@@ -97,10 +96,13 @@ export default function Dashboard() {
   }
 
   const handleDateClick = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-").map(Number)
-    const date = new Date(year, month - 1, day)
-    setSelectedDate(date)
+    // Двойной клик - открываем редактор
     setEditingDate(dateStr)
+  }
+
+  const handleDateSelect = (dateStr: string | null) => {
+    // Одиночный клик - выбираем дату
+    setSelectedDate(dateStr)
   }
 
   const handleSaveShift = (shift: Shift) => {
@@ -114,9 +116,8 @@ export default function Dashboard() {
 
   const handleDeleteShift = () => {
     if (selectedDate) {
-      const dateKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`
       const newShifts = new Map(scheduleData!.shifts)
-      newShifts.delete(dateKey)
+      newShifts.delete(selectedDate)
       setScheduleData({
         ...scheduleData!,
         shifts: newShifts,
@@ -141,10 +142,21 @@ export default function Dashboard() {
     }
   }
 
+  const formatDateString = (dateStr: string | null) => {
+    if (!dateStr) return null
+    const [year, month, day] = dateStr.split("-").map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString("ru-RU", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
   const getSelectedShift = () => {
     if (!selectedDate) return null
-    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`
-    return scheduleData!.shifts.get(dateStr) || null
+    return scheduleData!.shifts.get(selectedDate) || null
   }
 
   const getEditingShift = () => {
@@ -172,7 +184,7 @@ export default function Dashboard() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-foreground">{"График смен  эдишон"}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground">{"График смен эдишон"}</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground">2/2 график смен </p>
               </div>
             </div>
@@ -195,9 +207,11 @@ export default function Dashboard() {
             <ShiftCalendar
               shifts={scheduleData.shifts}
               monthlySettings={scheduleData.monthlySettings}
-              globalSettings={scheduleData.globalSettings} // pass global settings to calendar
+              globalSettings={scheduleData.globalSettings}
               onDateClick={handleDateClick}
               onEditMonth={handleEditMonth}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
             />
           </div>
 
@@ -207,7 +221,8 @@ export default function Dashboard() {
             <ShiftDetailsPanel
               shift={getSelectedShift()}
               date={selectedDate}
-              onEdit={() => setEditingDate(selectedDate ? selectedDate.toISOString().split("T")[0] : null)}
+              formattedDate={formatDateString(selectedDate)}
+              onEdit={() => setEditingDate(selectedDate)}
               onDelete={handleDeleteShift}
             />
 
@@ -229,7 +244,7 @@ export default function Dashboard() {
         <GlobalSettingsModal
           settings={scheduleData.globalSettings}
           onSave={handleSaveGlobalSettings}
-          onGenerate={handleGenerateSchedule} // added onGenerate prop
+          onGenerate={handleGenerateSchedule}
           onClose={() => setEditingGlobalSettings(false)}
         />
       )}
@@ -252,6 +267,7 @@ export default function Dashboard() {
           shift={getEditingShift()}
           onSave={handleSaveShift}
           onClose={() => setEditingDate(null)}
+          formattedDate={formatDateString(editingDate) || ''}
         />
       )}
     </div>

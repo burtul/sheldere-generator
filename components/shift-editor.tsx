@@ -6,26 +6,17 @@ import type { Shift, ShiftType, Notification } from "@/lib/types"
 import { X, Plus, Trash2 } from "lucide-react"
 
 interface ShiftEditorProps {
-  date: string // YYYY-MM-DD
+  date: string
   shift: Shift | null
   onSave: (shift: Shift) => void
   onClose: () => void
+  formattedDate: string // Добавляем пропс с отформатированной датой
 }
 
-// Обновлённый тип Shift:
-// interface Shift {
-//   date: string
-//   type: ShiftType
-//   hours: number
-//   minutes: number
-//   notes?: string
-//   notifications?: Notification[]
-// }
-
-export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) {
+export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: ShiftEditorProps) {
   const [shiftType, setShiftType] = useState<ShiftType>(shift?.type || "day")
-  const [hours, setHours] = useState(shift?.hours ?? 12)
-  const [minutes, setMinutes] = useState(shift?.minutes ?? 0)
+  const [hours, setHours] = useState(shift?.hours || 12)
+  const [hoursInput, setHoursInput] = useState(String(shift?.hours || 12))
   const [notes, setNotes] = useState(shift?.notes || "")
   const [notifications, setNotifications] = useState<Notification[]>(shift?.notifications || [])
   const [showNotificationForm, setShowNotificationForm] = useState(false)
@@ -35,8 +26,7 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
     onSave({
       date,
       type: shiftType,
-      hours,     // сохраняем отдельно часы
-      minutes,   // сохраняем отдельно минуты
+      hours,
       notes,
       notifications: notifications.length > 0 ? notifications : undefined,
     })
@@ -45,12 +35,14 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
 
   const handleAddNotification = () => {
     if (!notes.trim()) return
+
     const newNotif: Notification = {
       id: Date.now().toString(),
       time: newNotifTime,
       message: notes,
       createdAt: new Date().toISOString(),
     }
+
     setNotifications([...notifications, newNotif])
     setNewNotifTime("09:00")
     setShowNotificationForm(false)
@@ -60,26 +52,44 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
     setNotifications(notifications.filter((n) => n.id !== id))
   }
 
-  const shiftTypeDefaults: Record<ShiftType, { h: number; m: number }> = {
-    day: { h: 12, m: 0 },
-    night: { h: 12, m: 0 },
-    off: { h: 0, m: 0 },
-    offn: { h: 8, m: 0 },
+  const shiftTypeHours: Record<ShiftType, number> = {
+    day: 12,
+    night: 12,
+    off: 0,
+    offn: 8,
   }
 
   const handleShiftTypeChange = (type: ShiftType) => {
     setShiftType(type)
-    setHours(shiftTypeDefaults[type].h)
-    setMinutes(shiftTypeDefaults[type].m)
+    const newHours = shiftTypeHours[type]
+    setHours(newHours)
+    setHoursInput(newHours === 0 ? "" : String(newHours))
   }
 
-  const [year, month, day] = date.split("-").map(Number)
-  const dateObj = new Date(year, month - 1, day)
-  const dateDisplay = dateObj.toLocaleDateString("default", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })
+  const handleHoursFocus = () => {
+    if (hours === 0) {
+      setHoursInput("")
+    }
+  }
+
+  const handleHoursBlur = () => {
+    if (hoursInput === "") {
+      setHours(0)
+      setHoursInput("0")
+    } else {
+      const newHours = Number(hoursInput)
+      setHours(newHours)
+    }
+  }
+
+  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setHoursInput(value)
+
+    if (value !== "") {
+      setHours(Number(value))
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -91,11 +101,12 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
           </button>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">{dateDisplay}</p>
+        {/* Используем готовый formattedDate вместо dateDisplay */}
+        <p className="text-sm text-muted-foreground mb-4">{formattedDate}</p>
 
         <div className="space-y-4">
-          {/* Тип смены */}
           <div>
+            <label className="block text-sm font-medium text-foreground mb-2"></label>
             <div className="grid grid-cols-3 gap-2">
               {(["day", "night", "off"] as ShiftType[]).map((type) => (
                 <button
@@ -113,46 +124,20 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
             </div>
           </div>
 
-         {/* Часы и минуты */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Отработано</label>
-              <div className="flex gap-2">
-                {/* Часы */}
-                <input
-                  type="number"
-                  min="0"
-                  max="24"
-                  value={hours || ""}
-                  onChange={(e) => {
-                    let val = Number(e.target.value)
-                    if (val < 0) val = 0
-                    if (val > 24) val = 24
-                    setHours(val)
-                  }}
-                  placeholder="Часы"
-                  className="w-1/2 px-3 py-2 bg-input border border-border rounded-md text-foreground"
-                />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Отработано часов</label>
+            <input
+              type="number"
+              min="0"
+              max="24"
+              value={hoursInput}
+              onChange={handleHoursChange}
+              onFocus={handleHoursFocus}
+              onBlur={handleHoursBlur}
+              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+            />
+          </div>
 
-                {/* Минуты */}
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={minutes || ""}
-                  onChange={(e) => {
-                    let val = Number(e.target.value)
-                    if (val < 0) val = 0
-                    if (val > 59) val = 59
-                    setMinutes(val)
-                  }}
-                  placeholder="Минуты"
-                  className="w-1/2 px-3 py-2 bg-input border border-border rounded-md text-foreground"
-                />
-              </div>
-            </div>
-
-
-          {/* Запись */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Запись</label>
             <textarea
@@ -164,7 +149,6 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
             />
           </div>
 
-          {/* Напоминания */}
           <div className="border-t border-border pt-4">
             <div className="flex justify-between items-center mb-3">
               <label className="text-sm font-medium text-foreground">Напоминание</label>
@@ -187,6 +171,7 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
                   onChange={(e) => setNewNotifTime(e.target.value)}
                   className="w-full px-2 py-1 bg-input border border-border rounded text-foreground text-sm"
                 />
+                <p className="text-xs text-muted-foreground">Напоминание не может быть выставлено с пустым полем</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowNotificationForm(false)}
@@ -227,7 +212,6 @@ export function ShiftEditor({ date, shift, onSave, onClose }: ShiftEditorProps) 
             )}
           </div>
 
-          {/* Кнопки */}
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={onClose} className="flex-1 bg-transparent">
               Отмена
