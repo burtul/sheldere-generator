@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сборка веб-версии</title>
+    <title>Сборка проекта</title>
     <style>
         * {
             margin: 0;
@@ -27,7 +27,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -43,6 +43,38 @@
             line-height: 1.5;
         }
 
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #4CAF50;
+            border-bottom-color: #4CAF50;
+        }
+
+        .tab-content {
+            display: none;
+            text-align: left;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .build-btn {
             background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
@@ -52,22 +84,38 @@
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 20px;
+            margin: 10px 5px;
             display: inline-flex;
             align-items: center;
             gap: 10px;
         }
 
+        .build-btn.dev {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        }
+
+        .build-btn.android {
+            background: linear-gradient(135deg, #34A853, #188038);
+        }
+
+        .build-btn.sync {
+            background: linear-gradient(135deg, #4285F4, #1967D2);
+        }
+
+        .build-btn.gradle {
+            background: linear-gradient(135deg, #FBBC04, #EA8600);
+        }
+
         .build-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
 
         .commands {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
-            margin-top: 20px;
+            margin: 20px 0;
             text-align: left;
         }
 
@@ -78,6 +126,8 @@
             display: block;
             font-family: 'Courier New', monospace;
             margin: 10px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
 
         .info {
@@ -87,39 +137,262 @@
             border-radius: 10px;
             color: #1565c0;
         }
+
+        .warning {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .step {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
+            background: #f8fff8;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🚀 Сборка веб-версии</h1>
+    <h1>🚀 Сборка проекта</h1>
     <p class="description">
-        Нажмите кнопку ниже для сборки проекта. Эта операция выполняется локально на вашем компьютере.
+        Выберите тип сборки и нажмите соответствующую кнопку для получения инструкций
     </p>
 
-    <button class="build-btn" onclick="buildProject()">
-        <span>⚡ Собрать веб-версию</span>
-    </button>
-
-    <div class="commands">
-        <strong>Будут выполнены команды:</strong>
-        <code>npm install --legacy-peer-deps</code>
-        <code>npm run build</code>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('web')">🌐 Веб-версия</button>
+        <button class="tab" onclick="switchTab('android')">📱 Android</button>
+        <button class="tab" onclick="switchTab('dev')">🔧 Разработка</button>
     </div>
 
-    <div class="info">
-        💡 После сборки файлы будут доступны в папке <strong>.next/</strong>
+    <!-- Веб-сборка -->
+    <div id="web-tab" class="tab-content active">
+        <div class="btn-group">
+            <button class="build-btn" onclick="buildWeb()">
+                <span>⚡ Собрать веб-версию</span>
+            </button>
+        </div>
+
+        <div class="commands">
+            <strong>Будут выполнены команды:</strong>
+            <code>npm install --legacy-peer-deps</code>
+            <code>npm run build</code>
+        </div>
+
+        <div class="info">
+            💡 После сборки файлы будут доступны в папке <strong>.next/</strong>
+        </div>
+    </div>
+
+    <!-- Android сборка -->
+    <div id="android-tab" class="tab-content">
+        <div class="step">
+            <strong>Шаг 1:</strong> Синхронизация с Android
+        </div>
+        <button class="build-btn sync" onclick="syncAndroid()">
+            <span>🔄 Синхронизировать Android</span>
+        </button>
+        <code class="command-code" id="sync-command" style="display: none;">npx cap sync android</code>
+
+        <div class="step">
+            <strong>Шаг 2:</strong> Сборка APK
+        </div>
+        <button class="build-btn gradle" onclick="buildGradle()">
+            <span>🔨 Собрать APK (Gradle)</span>
+        </button>
+        <code class="command-code" id="gradle-command" style="display: none;">cd android
+            ./gradlew clean
+            ./gradlew assembleDebug</code>
+
+        <div class="step">
+            <strong>Шаг 3:</strong> Полная сборка Android
+        </div>
+        <button class="build-btn android" onclick="buildAndroid()">
+            <span>📱 Полная сборка Android</span>
+        </button>
+
+        <div class="commands">
+            <strong>Полный процесс сборки Android:</strong>
+            <code>npm install --legacy-peer-deps
+                npm run build
+                npx cap sync android
+                cd android
+                ./gradlew clean
+                ./gradlew assembleDebug</code>
+        </div>
+
+        <div class="info">
+            📦 APK файл будет создан в: <strong>android/app/build/outputs/apk/debug/</strong>
+        </div>
+
+        <div class="warning">
+            ⚠️ Убедитесь, что у вас установлен Android Studio и настроен Android SDK
+        </div>
+    </div>
+
+    <!-- Режим разработки -->
+    <div id="dev-tab" class="tab-content">
+        <div class="btn-group">
+            <button class="build-btn dev" onclick="startDev()">
+                <span>🔧 Запуск разработки</span>
+            </button>
+        </div>
+
+        <div class="commands">
+            <strong>Будут выполнены команды:</strong>
+            <code>npm install --legacy-peer-deps</code>
+            <code>npm run dev</code>
+        </div>
+
+        <div class="info">
+            🌐 После запуска откройте: <strong>http://localhost:3000</strong>
+        </div>
+
+        <div class="step">
+            <strong>Дополнительные команды для разработки:</strong>
+        </div>
+
+        <div class="commands">
+            <strong>Проверка кода:</strong>
+            <code>npm run lint</code>
+
+            <strong>Запуск продакшн-сервера:</strong>
+            <code>npm run build
+                npm run start</code>
+
+            <strong>Экспорт статической версии:</strong>
+            <code>npm run export</code>
+        </div>
+
+        <div class="warning">
+            💡 Режим разработки включает горячую перезагрузку и отладку
+        </div>
     </div>
 </div>
 
 <script>
-    function buildProject() {
-        const message = `🚀 Сборка веб-версии\n\nЭта функция работает только локально.\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run build\n\nПосле завершения сборки файлы будут в папке .next/`;
+    function switchTab(tabName) {
+        // Скрыть все табы
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
 
-        // Красивое модальное окно вместо стандартного alert
-        if (confirm(message)) {
-            // Дополнительное действие если нужно
-            console.log('Запуск сборки...');
-        }
+        // Показать выбранный таб
+        document.getElementById(tabName + '-tab').classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    function buildWeb() {
+        const message = `🚀 Сборка веб-версии\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run build\n\nПосле завершения сборки файлы будут в папке .next/`;
+        showAlert(message);
+    }
+
+    function syncAndroid() {
+        const command = document.getElementById('sync-command');
+        command.style.display = command.style.display === 'none' ? 'block' : 'none';
+
+        const message = `🔄 Синхронизация Android\n\nВыполните в терминале:\n\nnpx cap sync android\n\nЭта команда скопирует веб-файлы в Android проект.`;
+        showAlert(message);
+    }
+
+    function buildGradle() {
+        const command = document.getElementById('gradle-command');
+        command.style.display = command.style.display === 'none' ? 'block' : 'none';
+
+        const message = `🔨 Сборка APK через Gradle\n\nВыполните в терминале:\n\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\nAPK будет создан в android/app/build/outputs/apk/debug/`;
+        showAlert(message);
+    }
+
+    function buildAndroid() {
+        const message = `📱 Полная сборка Android приложения\n\nВыполните команды в терминале:\n\n1. Установка зависимостей и сборка веб-версии:\nnpm install --legacy-peer-deps\nnpm run build\n\n2. Синхронизация с Android:\nnpx cap sync android\n\n3. Сборка APK:\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\n📦 APK файл: android/app/build/outputs/apk/debug/app-debug.apk`;
+        showAlert(message);
+    }
+
+    function startDev() {
+        const message = `🔧 Запуск режима разработки\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run dev\n\nПосле запуска:\n🌐 Откройте браузер и перейдите по адресу: http://localhost:3000\n\n⚡ Режим разработки включает:\n• Горячую перезагрузку (HMR)\n• Отладку в реальном времени\n• Подробные ошибки в консоли\n• Быстрое обновление кода`;
+        showAlert(message);
+    }
+
+    function showAlert(message) {
+        // Создаем кастомное модальное окно вместо стандартного alert
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        `;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            white-space: pre-line;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        `;
+        messageDiv.textContent = message;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Закрыть';
+        closeBtn.style.cssText = `
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        `;
+        closeBtn.onclick = function() {
+            document.body.removeChild(modal);
+        };
+
+        modalContent.appendChild(messageDiv);
+        modalContent.appendChild(closeBtn);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // Закрытие по клику вне модального окна
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        };
     }
 
     // Добавляем анимацию при загрузке
