@@ -1,9 +1,9 @@
 {
   "name": "Мой график",
-  "version": "0.4.0",
+  "version": "0.4.6",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "node -e \"let pkg=require('./package.json'); let v=pkg.version.split('.'); v[2]++; pkg.version=v.join('.'); require('fs').writeFileSync('package.json', JSON.stringify(pkg,null,2)); console.log('✅ Версия:', pkg.version)\" && next build",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",

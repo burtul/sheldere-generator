@@ -13,22 +13,6 @@ A modern web application for managing 2/2 shift rotations with automatic schedul
 - **Offline Support**: Works offline with LocalStorage persistence and service worker
 - **PWA Ready**: Install as a native app on desktop and mobile devices
 
-## Getting Started
-
-### Installation
-
-1. Clone or download this project
-2. Install dependencies:
-   \`\`\`bash
-  npm install  --legacy-peer-deps
-   \`\`\`
-3. Run the development server:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-
 5. 🔄 1. Обновление иконки средствами Android Studio
    Если ты хочешь заменить иконку вручную:
 
@@ -40,10 +24,10 @@ A modern web application for managing 2/2 shift rotations with automatic schedul
 
 Убедись, что в AndroidManifest.xml прописано:
 
-
 xml
 android:icon="@mipmap/ic_launcher"
 android:roundIcon="@mipmap/ic_launcher_round"
+
 🧼 2. Очистка и синхронизация
 После замены иконок:c
 
@@ -62,17 +46,9 @@ npx cap sync android	                    ✅ Да	Обновляет конфи�
 
                         Создание апк из react
 
-npm install  --legacy-peer-deps
-npm run build
-
-## 📦 Сборка веб-версии
-
-### Интерактивная сборка
-[🚀 Нажмите здесь для сборки веб-версии](build.html) - откроется страница с кнопкой сборки
-
 ### Ручная сборка (для разработчиков)
-```bash
-# Установка зависимостей
+
+####  Установка зависимостей
 npm install --legacy-peer-deps
 
 # Сборка проекта
@@ -87,10 +63,32 @@ cd android
 ./gradlew clean
 
 🧱 Сборка APK через терминал
-./gradlew assembleDebug
 
+```bash
+.\build-android.ps1
+```
+
+```bash
+.\build-dev.ps1
+```
 # android/app/build/outputs/apk/debug/app-debug.apk
 
+
+Ошибка блокировки dev-сервера
+
+Решения:
+
+1. Завершить работающие процессы Node.js:
+```bash
+taskkill /f /im node.exe
+```
+2. Удалить lock-файл:
+   rm -f .next/dev/lock
+
+3. Или удалить всю папку .next:
+   rm -rf .next
+
+После этого повторите запуск разработки.
 *****************************************************************
 
 
@@ -187,10 +185,10 @@ vercel --prebuilt	Деплой уже собранного проекта
 
 ### Building for Production
 
-\`\`\`bash
+```bash
 npm run build
 npm run start
-\`\`\`
+```
 
 ### Быстрый старт
 
