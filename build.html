@@ -247,6 +247,10 @@
             <button class="build-btn dev" onclick="startDev()">
                 <span>🔧 Запуск разработки</span>
             </button>
+            <!-- В разделе разработки, после кнопки запуска -->
+            <button class="build-btn" onclick="fixDevLock()" style="background: linear-gradient(135deg, #FF6B6B, #EE5A24);">
+                <span>🔒 Исправить ошибку блокировки</span>
+            </button>
         </div>
 
         <div class="commands">
@@ -282,131 +286,135 @@
 </div>
 
 <script>
-    function switchTab(tabName) {
-        // Скрыть все табы
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        // Показать выбранный таб
-        document.getElementById(tabName + '-tab').classList.add('active');
-        event.target.classList.add('active');
+    function fixDevLock() {
+    const message = `🔒 Ошибка блокировки dev-сервера\n\nРешения:\n\n1. Завершить работающие процессы Node.js:\ntaskkill /f /im node.exe\n\n2. Удалить lock-файл:\nrm -f .next/dev/lock\n\n3. Или удалить всю папку .next:\nrm -rf .next\n\nПосле этого повторите запуск разработки.`;
+    showAlert(message);
     }
-
-    function buildWeb() {
-        const message = `🚀 Сборка веб-версии\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run build\n\nПосле завершения сборки файлы будут в папке .next/`;
-        showAlert(message);
-    }
-
-    function syncAndroid() {
-        const command = document.getElementById('sync-command');
-        command.style.display = command.style.display === 'none' ? 'block' : 'none';
-
-        const message = `🔄 Синхронизация Android\n\nВыполните в терминале:\n\nnpx cap sync android\n\nЭта команда скопирует веб-файлы в Android проект.`;
-        showAlert(message);
-    }
-
-    function buildGradle() {
-        const command = document.getElementById('gradle-command');
-        command.style.display = command.style.display === 'none' ? 'block' : 'none';
-
-        const message = `🔨 Сборка APK через Gradle\n\nВыполните в терминале:\n\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\nAPK будет создан в android/app/build/outputs/apk/debug/`;
-        showAlert(message);
-    }
-
-    function buildAndroid() {
-        const message = `📱 Полная сборка Android приложения\n\nВыполните команды в терминале:\n\n1. Установка зависимостей и сборка веб-версии:\nnpm install --legacy-peer-deps\nnpm run build\n\n2. Синхронизация с Android:\nnpx cap sync android\n\n3. Сборка APK:\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\n📦 APK файл: android/app/build/outputs/apk/debug/app-debug.apk`;
-        showAlert(message);
-    }
-
-    function startDev() {
-        const message = `🔧 Запуск режима разработки\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run dev\n\nПосле запуска:\n🌐 Откройте браузер и перейдите по адресу: http://localhost:3000\n\n⚡ Режим разработки включает:\n• Горячую перезагрузку (HMR)\n• Отладку в реальном времени\n• Подробные ошибки в консоли\n• Быстрое обновление кода`;
-        showAlert(message);
-    }
-
-    function showAlert(message) {
-        // Создаем кастомное модальное окно вместо стандартного alert
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        `;
-
-        const modalContent = document.createElement('div');
-        modalContent.style.cssText = `
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        `;
-
-        const messageDiv = document.createElement('div');
-        messageDiv.style.cssText = `
-            white-space: pre-line;
-            line-height: 1.5;
-            margin-bottom: 20px;
-            font-family: 'Courier New', monospace;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-        `;
-        messageDiv.textContent = message;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'Закрыть';
-        closeBtn.style.cssText = `
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        `;
-        closeBtn.onclick = function() {
-            document.body.removeChild(modal);
-        };
-
-        modalContent.appendChild(messageDiv);
-        modalContent.appendChild(closeBtn);
-        modal.appendChild(modalContent);
-        document.body.appendChild(modal);
-
-        // Закрытие по клику вне модального окна
-        modal.onclick = function(e) {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        };
-    }
-
-    // Добавляем анимацию при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        const container = document.querySelector('.container');
-        container.style.opacity = '0';
-        container.style.transform = 'translateY(20px)';
-
-        setTimeout(() => {
-            container.style.transition = 'all 0.5s ease';
-            container.style.opacity = '1';
-            container.style.transform = 'translateY(0)';
-        }, 100);
+function switchTab(tabName) {
+    // Скрыть все табы
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
     });
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Показать выбранный таб
+    document.getElementById(tabName + '-tab').classList.add('active');
+    event.target.classList.add('active');
+}
+
+function buildWeb() {
+    const message = `🚀 Сборка веб-версии\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run build\n\nПосле завершения сборки файлы будут в папке .next/`;
+    showAlert(message);
+}
+
+function syncAndroid() {
+    const command = document.getElementById('sync-command');
+    command.style.display = command.style.display === 'none' ? 'block' : 'none';
+
+    const message = `🔄 Синхронизация Android\n\nВыполните в терминале:\n\nnpx cap sync android\n\nЭта команда скопирует веб-файлы в Android проект.`;
+    showAlert(message);
+}
+
+function buildGradle() {
+    const command = document.getElementById('gradle-command');
+    command.style.display = command.style.display === 'none' ? 'block' : 'none';
+
+    const message = `🔨 Сборка APK через Gradle\n\nВыполните в терминале:\n\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\nAPK будет создан в android/app/build/outputs/apk/debug/`;
+    showAlert(message);
+}
+
+function buildAndroid() {
+    const message = `📱 Полная сборка Android приложения\n\nВыполните команды в терминале:\n\n1. Установка зависимостей и сборка веб-версии:\nnpm install --legacy-peer-deps\nnpm run build\n\n2. Синхронизация с Android:\nnpx cap sync android\n\n3. Сборка APK:\ncd android\n./gradlew clean\n./gradlew assembleDebug\n\n📦 APK файл: android/app/build/outputs/apk/debug/app-debug.apk`;
+    showAlert(message);
+}
+
+function startDev() {
+    const message = `🔧 Запуск режима разработки\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run dev\n\nПосле запуска:\n🌐 Откройте браузер и перейдите по адресу: http://localhost:3000\n\n⚡ Режим разработки включает:\n• Горячую перезагрузку (HMR)\n• Отладку в реальном времени\n• Подробные ошибки в консоли\n• Быстрое обновление кода`;
+    showAlert(message);
+}
+
+function showAlert(message) {
+    // Создаем кастомное модальное окно вместо стандартного alert
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
+
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    `;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.style.cssText = `
+        white-space: pre-line;
+        line-height: 1.5;
+        margin-bottom: 20px;
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+    `;
+    messageDiv.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Закрыть';
+    closeBtn.style.cssText = `
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    `;
+    closeBtn.onclick = function() {
+        document.body.removeChild(modal);
+    };
+
+    modalContent.appendChild(messageDiv);
+    modalContent.appendChild(closeBtn);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+
+    // Закрытие по клику вне модального окна
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
+}
+
+// Добавляем анимацию при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.container');
+    container.style.opacity = '0';
+    container.style.transform = 'translateY(20px)';
+
+    setTimeout(() => {
+        container.style.transition = 'all 0.5s ease';
+        container.style.opacity = '1';
+        container.style.transform = 'translateY(0)';
+    }, 100);
+});
 </script>
 </body>
 </html>
