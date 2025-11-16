@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сборка веб-версии</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .build-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .build-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .commands {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .commands code {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            display: block;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+
+        .info {
+            margin-top: 25px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🚀 Сборка веб-версии</h1>
+    <p class="description">
+        Нажмите кнопку ниже для сборки проекта. Эта операция выполняется локально на вашем компьютере.
+    </p>
+
+    <button class="build-btn" onclick="buildProject()">
+        <span>⚡ Собрать веб-версию</span>
+    </button>
+
+    <div class="commands">
+        <strong>Будут выполнены команды:</strong>
+        <code>npm install --legacy-peer-deps</code>
+        <code>npm run build</code>
+    </div>
+
+    <div class="info">
+        💡 После сборки файлы будут доступны в папке <strong>.next/</strong>
+    </div>
+</div>
+
+<script>
+    function buildProject() {
+        const message = `🚀 Сборка веб-версии\n\nЭта функция работает только локально.\n\nВыполните в терминале:\n\nnpm install --legacy-peer-deps\nnpm run build\n\nПосле завершения сборки файлы будут в папке .next/`;
+
+        // Красивое модальное окно вместо стандартного alert
+        if (confirm(message)) {
+            // Дополнительное действие если нужно
+            console.log('Запуск сборки...');
+        }
+    }
+
+    // Добавляем анимацию при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.querySelector('.container');
+        container.style.opacity = '0';
+        container.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            container.style.transition = 'all 0.5s ease';
+            container.style.opacity = '1';
+            container.style.transform = 'translateY(0)';
+        }, 100);
+    });
+</script>
+</body>
+</html>
