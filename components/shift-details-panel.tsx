@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { Shift } from "@/lib/types"
-import { Bell, Trash2 } from "lucide-react"
+import { Bell, Trash2, AlertCircle } from "lucide-react"
 
 interface ShiftDetailsPanelProps {
   shift: Shift | null
@@ -14,6 +14,7 @@ interface ShiftDetailsPanelProps {
   onDelete: () => void
   onNoteUpdate: (date: string, note: string) => void
   onNotificationDelete: (date: string, notificationId: string) => void
+  onNoteDelete: (date: string) => void
 }
 
 export function ShiftDetailsPanel({
@@ -23,16 +24,19 @@ export function ShiftDetailsPanel({
   onEdit,
   onDelete,
   onNoteUpdate,
-  onNotificationDelete
+  onNotificationDelete,
+  onNoteDelete
 }: ShiftDetailsPanelProps) {
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [currentNote, setCurrentNote] = useState("")
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Инициализация заметки при изменении смены
   useEffect(() => {
     setCurrentNote(shift?.notes || "")
     setIsEditingNote(false)
+    setShowDeleteAlert(false)
   }, [shift, date])
 
   // Автоматически фокусироваться на textarea при начале редактирования
@@ -71,11 +75,31 @@ export function ShiftDetailsPanel({
     }
   }
 
-  // Функция удаления уведомления (точно такая же как в ShiftEditor)
+  // Функция удаления уведомления (как в ShiftEditor)
   const handleRemoveNotification = (id: string) => {
     if (date && onNotificationDelete) {
       onNotificationDelete(date, id)
     }
+  }
+
+  // Функция удаления заметки
+  const handleRemoveNote = () => {
+    // Проверяем, есть ли уведомления, связанные с этой заметкой
+    const hasNotifications = shift?.notifications && shift.notifications.length > 0
+
+    if (hasNotifications) {
+      setShowDeleteAlert(true)
+    } else if (date && onNoteDelete) {
+      onNoteDelete(date)
+    }
+  }
+
+  // Функция подтверждения удаления (даже с уведомлениями)
+  const handleConfirmNoteDelete = () => {
+    if (date && onNoteDelete) {
+      onNoteDelete(date)
+    }
+    setShowDeleteAlert(false)
   }
 
   // Если дата не выбрана, показываем сообщение
@@ -87,6 +111,9 @@ export function ShiftDetailsPanel({
       </div>
     )
   }
+
+  // Проверяем, есть ли уведомления, связанные с заметкой
+  const hasNotifications = shift?.notifications && shift.notifications.length > 0
 
   return (
     <div className="bg-card rounded-lg p-6 border border-border">
@@ -142,7 +169,26 @@ export function ShiftDetailsPanel({
 
           {/* Блок заметки с возможностью редактирования по клику */}
           <div>
-            <span className="text-sm font-medium text-foreground">Запись: </span>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-foreground">Запись: </span>
+              {shift.notes && !isEditingNote && (
+                <button
+                  onClick={handleRemoveNote}
+                  className={`flex-shrink-0 p-1 transition-colors ${
+                    hasNotifications
+                      ? "text-yellow-500 hover:text-yellow-600"
+                      : "text-muted-foreground hover:text-destructive"
+                  }`}
+                  title={hasNotifications ? "Есть связанные уведомления" : "Удалить запись"}
+                >
+                  {hasNotifications ? (
+                    <AlertCircle className="h-3 w-3" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+            </div>
             {isEditingNote ? (
               <div className="mt-2">
                 <Textarea
@@ -176,6 +222,41 @@ export function ShiftDetailsPanel({
               </div>
             )}
           </div>
+
+          {/* Предупреждение об удалении заметки с уведомлениями */}
+          {showDeleteAlert && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-1">
+                    Внимание: есть связанные уведомления
+                  </h4>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    У этой записи есть уведомления. Если вы удалите запись, уведомления также будут удалены.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteAlert(false)}
+                      className="flex-1"
+                    >
+                      Отмена
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleConfirmNoteDelete}
+                      className="flex-1"
+                    >
+                      Удалить все
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button variant="outline" onClick={onEdit} className="flex-1">

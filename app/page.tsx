@@ -103,6 +103,23 @@ export default function Dashboard() {
     })
   }
 
+// Функция для удаления заметки
+const handleNoteDelete = (date: string) => {
+  const newShifts = new Map(scheduleData!.shifts)
+  const shift = newShifts.get(date)
+  if (shift) {
+    // Удаляем заметку и все связанные уведомления
+    newShifts.set(date, {
+      ...shift,
+      notes: "",
+      notifications: undefined // Удаляем все уведомления
+    })
+    setScheduleData({
+      ...scheduleData!,
+      shifts: newShifts
+    })
+  }
+}
   if (loading || !scheduleData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -264,6 +281,7 @@ export default function Dashboard() {
               onDelete={handleDeleteShift}
               onNoteUpdate={handleNoteUpdate}
               onNotificationDelete={handleNotificationDelete}
+              onNoteDelete={handleNoteDelete}
             />
 
             {/* Monthly Progress */}
