@@ -30,6 +30,7 @@ Write-Host "4. Building Android APK..." -ForegroundColor Yellow
 cd android
 .\gradlew clean
 .\gradlew assembleDebug
+cd ..
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Build completed successfully!" -ForegroundColor Green
