@@ -35,6 +35,10 @@ cd ..
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Build completed successfully!" -ForegroundColor Green
     Write-Host "APK file: android\app\build\outputs\apk\debug\app-debug.apk" -ForegroundColor Cyan
+
+    # Step 5: Open folder with APK
+    Write-Host "Opening APK folder..." -ForegroundColor Yellow
+    explorer.exe "android\app\build\outputs\apk\debug"
 } else {
     Write-Host "Android build error" -ForegroundColor Red
 }

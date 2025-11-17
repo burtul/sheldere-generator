@@ -38,26 +38,31 @@ export function generateSchedule(startDate: Date, years = 3, startIndex = 0): Ma
   return shifts
 }
 
+// Обновленные функции для учета минут
 export function getMonthHours(shifts: Map<string, Shift>, year: number, month: number): number {
-  let total = 0
-  shifts.forEach((shift) => {
-    const [shiftYear, shiftMonth] = shift.date.split("-").map(Number)
+  let totalMinutes = 0;
+
+  shifts.forEach((shift, dateKey) => {
+    const [shiftYear, shiftMonth] = dateKey.split("-").map(Number);
     if (shiftYear === year && shiftMonth === month) {
-      total += shift.hours
+      totalMinutes += shift.hours * 60 + shift.minutes;
     }
-  })
-  return total
+  });
+
+  return totalMinutes / 60; // Возвращаем десятичное значение часов
 }
 
 export function getMonthHoursFrom1To15(shifts: Map<string, Shift>, year: number, month: number): number {
-  let total = 0
-  shifts.forEach((shift) => {
-    const [shiftYear, shiftMonth, shiftDay] = shift.date.split("-").map(Number)
-    if (shiftYear === year && shiftMonth === month && shiftDay >= 1 && shiftDay <= 15) {
-      total += shift.hours
+  let totalMinutes = 0;
+
+  shifts.forEach((shift, dateKey) => {
+    const [shiftYear, shiftMonth, shiftDay] = dateKey.split("-").map(Number);
+    if (shiftYear === year && shiftMonth === month && shiftDay <= 15) {
+      totalMinutes += shift.hours * 60 + shift.minutes;
     }
-  })
-  return total
+  });
+
+  return totalMinutes / 60; // Возвращаем десятичное значение часов
 }
 
 export function getWorkDaysInMonth(year: number, month: number): number {

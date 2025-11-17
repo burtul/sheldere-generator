@@ -17,6 +17,8 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
   const [shiftType, setShiftType] = useState<ShiftType>(shift?.type || "day")
   const [hours, setHours] = useState(shift?.hours || 0)
   const [minutes, setMinutes] = useState(shift?.minutes || 0)
+  const [hoursInput, setHoursInput] = useState(shift?.hours ? String(shift.hours) : "")
+  const [minutesInput, setMinutesInput] = useState(shift?.minutes ? String(shift.minutes) : "")
   const [notes, setNotes] = useState(shift?.notes || "")
   const [notifications, setNotifications] = useState<Notification[]>(shift?.notifications || [])
   const [showNotificationForm, setShowNotificationForm] = useState(false)
@@ -48,12 +50,23 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
     }
   }, [onClose])
 
+  // Автоматически сбрасывать минуты при 24 часах
+  useEffect(() => {
+    if (hours === 24 && minutes > 0) {
+      setMinutes(0)
+      setMinutesInput("0")
+    }
+  }, [hours, minutes])
+
   const handleSave = () => {
+    // Финализируем проверку перед сохранением
+    const finalMinutes = hours === 24 ? 0 : minutes
+
     onSave({
       date,
       type: shiftType,
       hours,
-      minutes,
+      minutes: finalMinutes,
       notes,
       notifications: notifications.length > 0 ? notifications : undefined,
     })
@@ -91,6 +104,67 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
     const newTime = shiftTypeHours[type]
     setHours(newTime.hours)
     setMinutes(newTime.minutes)
+    setHoursInput(newTime.hours === 0 ? "" : String(newTime.hours))
+    setMinutesInput(newTime.minutes === 0 ? "" : String(newTime.minutes))
+  }
+
+  const handleHoursFocus = () => {
+    if (hoursInput === "0") {
+      setHoursInput("")
+    }
+  }
+
+  const handleHoursBlur = () => {
+    if (hoursInput === "") {
+      setHours(0)
+      setHoursInput("0")
+    } else {
+      const newHours = Math.min(24, Math.max(0, Number(hoursInput)))
+      setHours(newHours)
+      setHoursInput(String(newHours))
+
+      // Сброс минут при 24 часах
+      if (newHours === 24) {
+        setMinutes(0)
+        setMinutesInput("0")
+      }
+    }
+  }
+
+  const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // Разрешаем только цифры и пустую строку
+    if (value === "" || /^\d+$/.test(value)) {
+      setHoursInput(value)
+    }
+  }
+
+  const handleMinutesFocus = () => {
+    if (minutesInput === "0") {
+      setMinutesInput("")
+    }
+  }
+
+  const handleMinutesBlur = () => {
+    if (minutesInput === "") {
+      setMinutes(0)
+      setMinutesInput("0")
+    } else {
+      const newMinutes = Math.min(59, Math.max(0, Number(minutesInput)))
+      setMinutes(newMinutes)
+      setMinutesInput(String(newMinutes))
+    }
+  }
+
+  const handleMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // Разрешаем только цифры и пустую строку
+    if (value === "" || /^\d+$/.test(value)) {
+      // Блокируем ввод минут при 24 часах
+      if (hours !== 24) {
+        setMinutesInput(value)
+      }
+    }
   }
 
   return (
@@ -135,30 +209,40 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
             <label className="block text-sm font-medium text-foreground mb-2">Отработано времени</label>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">Часы</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Часы (макс. 24)</label>
                 <input
-                  type="number"
-                  min="0"
-                  max="24"
-                  value={hours}
-                  onChange={(e) => setHours(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={hoursInput}
+                  onChange={handleHoursChange}
+                  onFocus={handleHoursFocus}
+                  onBlur={handleHoursBlur}
                   className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                  placeholder="0"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">Минуты</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Минуты (макс. 59)</label>
                 <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={minutes}
-                  onChange={(e) => setMinutes(Math.min(59, Number(e.target.value)))}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={minutesInput}
+                  onChange={handleMinutesChange}
+                  onFocus={handleMinutesFocus}
+                  onBlur={handleMinutesBlur}
+                  disabled={hours === 24}
+                  className={`w-full px-3 py-2 bg-input border border-border rounded-md text-foreground ${
+                    hours === 24 ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  placeholder="0"
                 />
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Итого: {hours}ч {minutes > 0 && `${minutes}м`}
+              {hours === 24 && " (минуты не учитываются при 24 часах)"}
             </p>
           </div>
 
