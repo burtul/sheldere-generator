@@ -59,6 +59,50 @@ export default function Dashboard() {
     }
   }, [scheduleData])
 
+  // Функция для удаления уведомления
+  const handleNotificationDelete = (date: string, notificationId: string) => {
+    const newShifts = new Map(scheduleData!.shifts)
+    const shift = newShifts.get(date)
+    if (shift && shift.notifications) {
+      const updatedNotifications = shift.notifications.filter(n => n.id !== notificationId)
+      newShifts.set(date, {
+        ...shift,
+        notifications: updatedNotifications.length > 0 ? updatedNotifications : undefined
+      })
+      setScheduleData({
+        ...scheduleData!,
+        shifts: newShifts
+      })
+    }
+  }
+
+  // Функция для обновления заметки
+  const handleNoteUpdate = (date: string, note: string) => {
+    const newShifts = new Map(scheduleData!.shifts)
+    const shift = newShifts.get(date)
+    if (shift) {
+      // Обновляем заметку у существующей смены
+      newShifts.set(date, {
+        ...shift,
+        notes: note
+      })
+    } else {
+      // Если смены нет, то создаем новую смену с заметкой
+      newShifts.set(date, {
+        date,
+        type: 'day', // тип по умолчанию
+        hours: 0,
+        minutes: 0,
+        notes: note,
+        notifications: []
+      })
+    }
+    setScheduleData({
+      ...scheduleData!,
+      shifts: newShifts
+    })
+  }
+
   if (loading || !scheduleData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -164,12 +208,6 @@ export default function Dashboard() {
     return scheduleData!.shifts.get(editingDate) || null
   }
 
-  const upcomingMonths = Array.from({ length: 3 }, (_, i) => {
-    const d = new Date()
-    d.setMonth(d.getMonth() + i)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-  })
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Offline Indicator */}
@@ -224,6 +262,8 @@ export default function Dashboard() {
               formattedDate={formatDateString(selectedDate)}
               onEdit={() => setEditingDate(selectedDate)}
               onDelete={handleDeleteShift}
+              onNoteUpdate={handleNoteUpdate}
+              onNotificationDelete={handleNotificationDelete}
             />
 
             {/* Monthly Progress */}

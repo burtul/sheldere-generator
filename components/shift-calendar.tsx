@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Edit2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit2, Bell } from "lucide-react"
 import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -118,6 +118,11 @@ export function ShiftCalendar({
     }
   }
 
+  // Функция для проверки наличия уведомлений
+  const hasNotifications = (shift: Shift | null) => {
+    return shift?.notifications && shift.notifications.length > 0
+  }
+
   return (
     <div className="bg-card rounded-lg p-6 border border-border">
       <div className="flex items-center justify-center gap-4 mb-6">
@@ -158,6 +163,8 @@ export function ShiftCalendar({
           const shift = getShiftInfo(day)
           const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null
           const isSelected = selectedDate === dateStr
+          const hasNote = !!shift?.notes
+          const hasNotif = hasNotifications(shift)
 
           return (
             <div
@@ -172,7 +179,9 @@ export function ShiftCalendar({
                 "flex flex-col justify-center items-center border",
                 day ? "hover:border-primary/50 hover:shadow-md bg-card" : "bg-muted/20",
                 isSelected && "ring-2 ring-primary",
-                shift?.notes ? "border-4 border-accent" : "border-border",
+                // Разные стили для заметок и уведомлений
+                hasNote && "border-2 border-accent", // Заметки - цветная рамка
+                hasNotif && "border-dashed border-2 border-blue-400", // Уведомления - пунктирная синяя рамка
                 shift?.type === "day" && "bg-[var(--day-color)]",
                 shift?.type === "night" && "bg-[var(--night-color)]",
                 (shift?.type === "day" || shift?.type === "night") && "text-white"
@@ -204,6 +213,12 @@ export function ShiftCalendar({
                     >
                       {shift.hours}h {shift.minutes > 0 && `${shift.minutes}m`}
                     </span>
+                  )}
+                  {/* Иконка уведомления - УВЕЛИЧЕНА */}
+                  {hasNotif && (
+                    <div className="absolute top-0.5 right-0.5">
+                      <Bell className="h-4 w-4 text-blue-500 fill-blue-500" />
+                    </div>
                   )}
                 </>
               )}
