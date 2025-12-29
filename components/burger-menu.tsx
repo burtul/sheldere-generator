@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, FormControlLabel } from "@mui/material"
+import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox } from "@mui/material"
 import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
@@ -126,7 +125,8 @@ export default function BurgerMenu({
     }
   }
 
-  const handleThemeToggle = () => {
+  const handleThemeToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation()
     setDarkMode(!darkMode)
   }
 
@@ -215,13 +215,14 @@ export default function BurgerMenu({
                       {darkMode ? <DarkModeIcon color="action" /> : <LightModeIcon color="action" />}
                     </ListItemIcon>
                     <ListItemText primary="Тема" secondary="Переключение темы" />
-                    <Switch
-                      checked={darkMode}
-                      onChange={handleThemeToggle}
-                      color="primary"
-                      edge="end"
-                    />
                   </ListItemButton>
+                  <Switch
+                    checked={darkMode}
+                    onChange={handleThemeToggle}
+                    color="primary"
+                    edge="end"
+                    sx={{ mr: 1 }}
+                  />
                 </ListItem>
 
                 <ListItem disablePadding>
@@ -351,9 +352,10 @@ export default function BurgerMenu({
                         <Typography variant="body2" color="text.secondary">Карточка с деталями текущей смены</Typography>
                       </Box>
                     </Box>
-                    <Checkbox
+                    <MuiCheckbox
                       checked={localVisibilitySettings.showShiftInfo}
                       onChange={() => handleVisibilityChange('showShiftInfo')}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </Box>
 
@@ -367,9 +369,10 @@ export default function BurgerMenu({
                         <Typography variant="body2" color="text.secondary">Карточка с прогрессом за месяц</Typography>
                       </Box>
                     </Box>
-                    <Checkbox
+                    <MuiCheckbox
                       checked={localVisibilitySettings.showMonthProgress}
                       onChange={() => handleVisibilityChange('showMonthProgress')}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </Box>
 
@@ -383,9 +386,10 @@ export default function BurgerMenu({
                         <Typography variant="body2" color="text.secondary">Карточка со списком задач</Typography>
                       </Box>
                     </Box>
-                    <Checkbox
+                    <MuiCheckbox
                       checked={localVisibilitySettings.showTodoList}
                       onChange={() => handleVisibilityChange('showTodoList')}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </Box>
                 </Box>
