@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
-import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon } from "@mui/icons-material"
+import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
 interface BurgerMenuProps {
@@ -35,6 +35,7 @@ export default function BurgerMenu({
   const [customNumber, setCustomNumber] = useState<string>(scheduleData.globalSettings.customNumber?.toString() || "")
   const [localVisibilitySettings, setLocalVisibilitySettings] = useState(visibilitySettings)
   const [darkMode, setDarkMode] = useState(false)
+  const [openClearDialog, setOpenClearDialog] = useState(false)
 
   const colorPresets = {
     day: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
@@ -87,7 +88,7 @@ export default function BurgerMenu({
   const handleSaveSettings = () => {
     const trimmedValue = customNumber.trim()
     const numValue = trimmedValue === "" ? undefined : parseFloat(trimmedValue)
-        
+         
     onGlobalSettingsSave({
       dayShiftColor: dayColor,
       nightShiftColor: nightColor,
@@ -130,6 +131,19 @@ export default function BurgerMenu({
     setDarkMode(!darkMode)
   }
 
+  const handleClearUserData = () => {
+    localStorage.clear()
+    window.location.reload()
+  }
+
+  const handleOpenClearDialog = () => {
+    setOpenClearDialog(true)
+  }
+
+  const handleCloseClearDialog = () => {
+    setOpenClearDialog(false)
+  }
+
   if (!isOpen) return null
 
   return (
@@ -154,7 +168,7 @@ export default function BurgerMenu({
             ) : (
               <Button
                 onClick={() => setActiveSection("main")}
-                startIcon={<CloseIcon />}
+                startIcon={<ArrowBackIcon />}
                 sx={{ color: theme.palette.text.secondary }}
               >
                 Назад
@@ -193,7 +207,7 @@ export default function BurgerMenu({
                 <ListItem disablePadding>
                   <ListItemButton onClick={handleOpenGlobalNotes}>
                     <ListItemIcon>
-                      <NoteIcon color="warning" />
+                      <ListIcon color="warning" />
                     </ListItemIcon>
                     <ListItemText primary="Список дел" secondary="Редактировать список дел" />
                   </ListItemButton>
@@ -223,6 +237,16 @@ export default function BurgerMenu({
                     edge="end"
                     sx={{ mr: 1 }}
                   />
+                </ListItem>
+
+                {/* Clear User Data */}
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleOpenClearDialog}>
+                    <ListItemIcon>
+                      <DeleteIcon color="error" />
+                    </ListItemIcon>
+                    <ListItemText primary="Очистить данные" secondary="Удалить все пользовательские данные" />
+                  </ListItemButton>
                 </ListItem>
 
                 <ListItem disablePadding>
@@ -345,7 +369,7 @@ export default function BurgerMenu({
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.primary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.primary.main, borderRadius: '50%' }}></Box>
+                        <InfoIcon sx={{ color: theme.palette.primary.contrastText }} />
                       </Box>
                       <Box>
                         <Typography variant="subtitle1">Информация о смене</Typography>
@@ -362,7 +386,7 @@ export default function BurgerMenu({
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.secondary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.secondary.main, borderRadius: '50%' }}></Box>
+                        <BarChartIcon sx={{ color: theme.palette.secondary.contrastText }} />
                       </Box>
                       <Box>
                         <Typography variant="subtitle1">Прогресс месяца</Typography>
@@ -379,7 +403,7 @@ export default function BurgerMenu({
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.warning.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.warning.main, borderRadius: '2px' }}></Box>
+                        <ListIcon sx={{ color: theme.palette.warning.contrastText }} />
                       </Box>
                       <Box>
                         <Typography variant="subtitle1">Список дел</Typography>
@@ -398,6 +422,31 @@ export default function BurgerMenu({
           </Box>
         </Box>
       </Drawer>
+
+      {/* Clear User Data Dialog */}
+      <Dialog
+        open={openClearDialog}
+        onClose={handleCloseClearDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Очистить пользовательские данные
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Вы уверены, что хотите удалить все пользовательские данные? Это действие нельзя будет отменить.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseClearDialog} color="primary">
+            Отмена
+          </Button>
+          <Button onClick={handleClearUserData} color="error" autoFocus>
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ThemeProvider>
   )
 }

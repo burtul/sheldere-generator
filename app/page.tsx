@@ -15,7 +15,8 @@
   import { generateSchedule, getWorkDaysInMonth } from "@/lib/schedule-utils"
   import { loadScheduleData, saveScheduleData } from "@/lib/storage"
   import { defaultColors } from "@/lib/color-presets"
-  import { Settings2, Calendar, Menu, Edit2, Plus } from "lucide-react"
+  import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
+  import { Menu as MenuIcon } from "@mui/icons-material"
 
   export default function Dashboard() {
     const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null)
@@ -368,7 +369,7 @@
                   className="p-2 hover:bg-card rounded-lg transition-colors"
                   title="Open Menu"
                 >
-                  <Menu className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
+                  <MenuIcon className="h-6 w-6 text-muted-foreground hover:text-foreground transition-colors" />
                 </button>
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <Calendar className="h-6 w-6 text-primary" />
