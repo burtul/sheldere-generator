@@ -7,7 +7,8 @@ export function saveScheduleData(data: ScheduleData): void {
     startDate: data.startDate.toISOString(),
     shifts: Array.from(data.shifts.entries()),
     monthlySettings: Array.from(data.monthlySettings.entries()),
-    globalSettings: data.globalSettings, // save global settings
+    globalSettings: data.globalSettings,
+    globalNotes: data.globalNotes,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
 }
@@ -18,14 +19,14 @@ export function loadScheduleData(): ScheduleData | null {
 
   try {
     const parsed = JSON.parse(data)
-    
+
     // Восстанавливаем смены с проверкой на undefined и NaN
     const shifts = new Map<string, Shift>()
     parsed.shifts.forEach(([dateKey, shift]: [string, any]) => {
       // Проверяем и устанавливаем значения по умолчанию для hours и minutes
       const hours = (shift.hours !== undefined && !isNaN(shift.hours)) ? shift.hours : 0
       const minutes = (shift.minutes !== undefined && !isNaN(shift.minutes)) ? shift.minutes : 0
-      
+
       shifts.set(dateKey, {
         ...shift,
         hours,
@@ -37,7 +38,8 @@ export function loadScheduleData(): ScheduleData | null {
       startDate: new Date(parsed.startDate),
       shifts,
       monthlySettings: new Map(parsed.monthlySettings),
-      globalSettings: parsed.globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" }, // load global settings with defaults
+      globalSettings: parsed.globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" },
+      globalNotes: parsed.globalNotes || "",
     }
   } catch {
     return null

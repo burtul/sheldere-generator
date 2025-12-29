@@ -25,3 +25,11 @@ export interface GlobalSettings {
   nightShiftColor: string
   customNumber?: number
 }
+
+export interface ScheduleData {
+  startDate: Date
+  shifts: Map<string, Shift>
+  monthlySettings: Map<string, MonthlySettings>
+  globalSettings: GlobalSettings
+  globalNotes?: string
+}

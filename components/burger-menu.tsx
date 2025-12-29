@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
-import { Palette, Calculator, X, StickyNote, LogOut, Eye } from "lucide-react"
-import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, FormControlLabel } from "@mui/material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon } from "@mui/icons-material"
+import { ThemeProvider, createTheme } from "@mui/material/styles"
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -33,6 +35,7 @@ export default function BurgerMenu({
   const [nightColor, setNightColor] = useState(scheduleData.globalSettings.nightShiftColor)
   const [customNumber, setCustomNumber] = useState<string>(scheduleData.globalSettings.customNumber?.toString() || "")
   const [localVisibilitySettings, setLocalVisibilitySettings] = useState(visibilitySettings)
+  const [darkMode, setDarkMode] = useState(false)
 
   const colorPresets = {
     day: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
@@ -49,10 +52,43 @@ export default function BurgerMenu({
     setLocalVisibilitySettings(visibilitySettings)
   }, [visibilitySettings])
 
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setDarkMode(savedTheme === 'dark')
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light')
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+      primary: {
+        main: darkMode ? '#D0BCFF' : '#6750A4',
+      },
+      secondary: {
+        main: darkMode ? '#CCC2DC' : '#625B71',
+      },
+      background: {
+        default: darkMode ? '#161211' : '#FFF8F4',
+        paper: darkMode ? '#161211' : '#FFF8F4',
+      },
+      text: {
+        primary: darkMode ? '#EBE0DD' : '#201A19',
+        secondary: darkMode ? '#CAC4D0' : '#49454F',
+      },
+    },
+  })
+
   const handleSaveSettings = () => {
     const trimmedValue = customNumber.trim()
     const numValue = trimmedValue === "" ? undefined : parseFloat(trimmedValue)
-      
+        
     onGlobalSettingsSave({
       dayShiftColor: dayColor,
       nightShiftColor: nightColor,
@@ -90,236 +126,274 @@ export default function BurgerMenu({
     }
   }
 
+  const handleThemeToggle = () => {
+    setDarkMode(!darkMode)
+  }
+
   if (!isOpen) return null
 
   return (
-    <div 
-      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-        isClosing ? 'opacity-0' : 'opacity-100'
-      }`}
-      onClick={onBackdropClick}
-    >
-      <div 
-        className={`absolute left-0 top-0 h-full w-80 bg-background border-r border-border transform transition-transform duration-300 ${
-          isClosing ? '-translate-x-full' : 'translate-x-0'
-        }`}
-        onClick={(e) => e.stopPropagation()}
+    <ThemeProvider theme={theme}>
+      <Drawer
+        anchor="left"
+        open={isOpen}
+        onClose={onClose}
+        sx={{ 
+          '& .MuiDrawer-paper': {
+            width: 320,
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          }
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          {activeSection === "main" ? (
-            <h2 className="text-lg font-semibold">Меню</h2>
-          ) : (
-            <button 
-              onClick={() => setActiveSection("main")}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Header */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {activeSection === "main" ? (
+              <Typography variant="h6">Меню</Typography>
+            ) : (
+              <Button
+                onClick={() => setActiveSection("main")}
+                startIcon={<CloseIcon />}
+                sx={{ color: theme.palette.text.secondary }}
+              >
+                Назад
+              </Button>
+            )}
+            <Button
+              onClick={onClose}
+              sx={{ minWidth: 'auto', p: 1, color: theme.palette.text.secondary }}
             >
-              <X className="w-4 h-4" />
-              Назад
-            </button>
-          )}
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-card rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+              <CloseIcon />
+            </Button>
+          </Box>
 
-        {/* Content */}
-        <div className="p-4 h-[calc(100vh-80px)] overflow-y-auto">
-          {activeSection === "main" && (
-            <nav className="space-y-2">
-              <button 
-                onClick={() => setActiveSection("colors")}
-                className="w-full flex items-center gap-3 text-left p-3 hover:bg-card rounded-lg transition-colors"
-              >
-                <Palette className="w-5 h-5 text-blue-500" />
-                <div>
-                  <div className="font-medium">Цвета смен</div>
-                  <div className="text-sm text-muted-foreground">Настройка цветов</div>
-                </div>
-              </button>
+          {/* Content */}
+          <Box sx={{ p: 2, overflowY: 'auto', flexGrow: 1 }}>
+            {activeSection === "main" && (
+              <List>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setActiveSection("colors")}>
+                    <ListItemIcon>
+                      <PaletteIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText primary="Цвета смен" secondary="Настройка цветов" />
+                  </ListItemButton>
+                </ListItem>
 
-              <button 
-                onClick={() => setActiveSection("salary")}
-                className="w-full flex items-center gap-3 text-left p-3 hover:bg-card rounded-lg transition-colors"
-              >
-                <Calculator className="w-5 h-5 text-green-500" />
-                <div>
-                  <div className="font-medium">Оклад</div>
-                  <div className="text-sm text-muted-foreground">Настройка оклада</div>
-                </div>
-              </button>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setActiveSection("salary")}>
+                    <ListItemIcon>
+                      <CalculatorIcon color="success" />
+                    </ListItemIcon>
+                    <ListItemText primary="Оклад" secondary="Настройка оклада" />
+                  </ListItemButton>
+                </ListItem>
 
-              <button 
-                onClick={handleOpenGlobalNotes}
-                className="w-full flex items-center gap-3 text-left p-3 hover:bg-card rounded-lg transition-colors"
-              >
-                <StickyNote className="w-5 h-5 text-yellow-500" />
-                <div>
-                  <div className="font-medium">Список дел</div>
-                  <div className="text-sm text-muted-foreground">Редактировать список дел</div>
-                </div>
-              </button>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleOpenGlobalNotes}>
+                    <ListItemIcon>
+                      <NoteIcon color="warning" />
+                    </ListItemIcon>
+                    <ListItemText primary="Список дел" secondary="Редактировать список дел" />
+                  </ListItemButton>
+                </ListItem>
 
-              <button 
-                onClick={() => setActiveSection("visibility")}
-                className="w-full flex items-center gap-3 text-left p-3 hover:bg-card rounded-lg transition-colors"
-              >
-                <Eye className="w-5 h-5 text-purple-500" />
-                <div>
-                  <div className="font-medium">Видимость карточек</div>
-                  <div className="text-sm text-muted-foreground">Управление отображением</div>
-                </div>
-              </button>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setActiveSection("visibility")}>
+                    <ListItemIcon>
+                      <VisibilityIcon color="secondary" />
+                    </ListItemIcon>
+                    <ListItemText primary="Видимость карточек" secondary="Управление отображением" />
+                  </ListItemButton>
+                </ListItem>
 
-              <button 
-                onClick={handleExitApp}
-                className="w-full flex items-center gap-3 text-left p-3 hover:bg-card rounded-lg transition-colors"
-              >
-                <LogOut className="w-5 h-5 text-red-500" />
-                <div>
-                  <div className="font-medium">Выйти</div>
-                  <div className="text-sm text-muted-foreground">Закрыть приложение</div>
-                </div>
-              </button>
-            </nav>
-          )}
-
-          {/* Colors Section */}
-          {activeSection === "colors" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Цвета смен</h3>
-                
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-3">Цвет дневной смены</label>
-                <div className="flex gap-2 flex-wrap w-full">
-                  {colorPresets.day.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setDayColor(color)}
-                      className={`flex-1 min-w-[calc(20%-0.5rem)] h-12 rounded-md border-2 transition-all ${
-                        dayColor === color ? "border-accent shadow-lg scale-105" : "border-border"
-                      }`}
-                      style={{ backgroundColor: color }}
+                {/* Theme Toggle */}
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setActiveSection("visibility")}>
+                    <ListItemIcon>
+                      {darkMode ? <DarkModeIcon color="action" /> : <LightModeIcon color="action" />}
+                    </ListItemIcon>
+                    <ListItemText primary="Тема" secondary="Переключение темы" />
+                    <Switch
+                      checked={darkMode}
+                      onChange={handleThemeToggle}
+                      color="primary"
+                      edge="end"
                     />
-                  ))}
-                </div>
-              </div>
+                  </ListItemButton>
+                </ListItem>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-3">Цвет ночной смены</label>
-                <div className="flex gap-2 flex-wrap w-full">
-                  {colorPresets.night.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setNightColor(color)}
-                      className={`flex-1 min-w-[calc(20%-0.5rem)] h-12 rounded-md border-2 transition-all ${
-                        nightColor === color ? "border-accent shadow-lg scale-105" : "border-border"
-                      }`}
-                      style={{ backgroundColor: color }}
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleExitApp}>
+                    <ListItemIcon>
+                      <LogoutIcon color="error" />
+                    </ListItemIcon>
+                    <ListItemText primary="Выйти" secondary="Закрыть приложение" />
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            )}
+
+            {/* Colors Section */}
+            {activeSection === "colors" && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="h6">Цвета смен</Typography>
+
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>Цвет дневной смены</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {colorPresets.day.map((color) => (
+                      <Button
+                        key={color}
+                        onClick={() => setDayColor(color)}
+                        sx={{
+                          flex: 1,
+                          minWidth: 'calc(20% - 8px)',
+                          height: 48,
+                          borderRadius: 1,
+                          backgroundColor: color,
+                          border: dayColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                          boxShadow: dayColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>Цвет ночной смены</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {colorPresets.night.map((color) => (
+                      <Button
+                        key={color}
+                        onClick={() => setNightColor(color)}
+                        sx={{
+                          flex: 1,
+                          minWidth: 'calc(20% - 8px)',
+                          height: 48,
+                          borderRadius: 1,
+                          backgroundColor: color,
+                          border: nightColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                          boxShadow: nightColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+
+                <Button
+                  onClick={handleSaveSettings}
+                  variant="contained"
+                  color="primary"
+                  sx={{ mt: 2 }}
+                >
+                  Сохранить цвета
+                </Button>
+              </Box>
+            )}
+
+            {/* Salary Section */}
+            {activeSection === "salary" && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="h6">Настройка оклада</Typography>
+
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>Оклад</Typography>
+                  <TextField
+                    type="number"
+                    value={customNumber}
+                    onChange={(e) => setCustomNumber(e.target.value)}
+                    placeholder="Введите оклад"
+                    variant="outlined"
+                    fullWidth
+                    sx={{ mb: 1 }}
+                  />
+                  <Typography variant="caption" display="block" gutterBottom>
+                    Для расчета аванса
+                  </Typography>
+                </Box>
+
+                <Button
+                  onClick={handleSaveSettings}
+                  variant="contained"
+                  color="primary"
+                >
+                  Сохранить оклад
+                </Button>
+              </Box>
+            )}
+
+            {/* Visibility Section */}
+            {activeSection === "visibility" && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="h6">Видимость карточек</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Управляйте отображением карточек на главном экране
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.primary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.primary.main, borderRadius: '50%' }}></Box>
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1">Информация о смене</Typography>
+                        <Typography variant="body2" color="text.secondary">Карточка с деталями текущей смены</Typography>
+                      </Box>
+                    </Box>
+                    <Checkbox
+                      checked={localVisibilitySettings.showShiftInfo}
+                      onChange={() => handleVisibilityChange('showShiftInfo')}
                     />
-                  ))}
-                </div>
-              </div>
+                  </Box>
 
-              <button 
-                onClick={handleSaveSettings}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-              >
-                Сохранить цвета
-              </button>
-            </div>
-          )}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.secondary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.secondary.main, borderRadius: '50%' }}></Box>
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1">Прогресс месяца</Typography>
+                        <Typography variant="body2" color="text.secondary">Карточка с прогрессом за месяц</Typography>
+                      </Box>
+                    </Box>
+                    <Checkbox
+                      checked={localVisibilitySettings.showMonthProgress}
+                      onChange={() => handleVisibilityChange('showMonthProgress')}
+                    />
+                  </Box>
 
-          {/* Salary Section */}
-          {activeSection === "salary" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Настройка оклада</h3>
-                
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Оклад</label>
-                <input
-                  type="number"
-                  value={customNumber}
-                  onChange={(e) => setCustomNumber(e.target.value)}
-                  placeholder="Введите оклад"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Для расчета аванса
-                </p>
-              </div>
-
-              <button 
-                onClick={handleSaveSettings}
-                className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-              >
-                Сохранить оклад
-              </button>
-            </div>
-          )}
-
-          {/* Visibility Section */}
-          {activeSection === "visibility" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Видимость карточек</h3>
-              <p className="text-sm text-muted-foreground">Управляйте отображением карточек на главном экране</p>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                      <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                    </div>
-                    <div>
-                      <div className="font-medium">Информация о смене</div>
-                      <div className="text-sm text-muted-foreground">Карточка с деталями текущей смены</div>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localVisibilitySettings.showShiftInfo}
-                    onCheckedChange={() => handleVisibilityChange('showShiftInfo')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                    </div>
-                    <div>
-                      <div className="font-medium">Прогресс месяца</div>
-                      <div className="text-sm text-muted-foreground">Карточка с прогрессом за месяц</div>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localVisibilitySettings.showMonthProgress}
-                    onCheckedChange={() => handleVisibilityChange('showMonthProgress')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                      <div className="w-4 h-4 bg-yellow-500 rounded-sm"></div>
-                    </div>
-                    <div>
-                      <div className="font-medium">Список дел</div>
-                      <div className="text-sm text-muted-foreground">Карточка со списком задач</div>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localVisibilitySettings.showTodoList}
-                    onCheckedChange={() => handleVisibilityChange('showTodoList')}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 32, height: 32, backgroundColor: theme.palette.warning.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box sx={{ width: 16, height: 16, backgroundColor: theme.palette.warning.main, borderRadius: '2px' }}></Box>
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle1">Список дел</Typography>
+                        <Typography variant="body2" color="text.secondary">Карточка со списком задач</Typography>
+                      </Box>
+                    </Box>
+                    <Checkbox
+                      checked={localVisibilitySettings.showTodoList}
+                      onChange={() => handleVisibilityChange('showTodoList')}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Drawer>
+    </ThemeProvider>
   )
 }

@@ -1,6 +1,6 @@
 {
   "name": "Мой график",
-  "version": "0.4.21",
+  "version": "0.5.2",
   "private": true,
   "scripts": {
     "build": "node -e \"let pkg=require('./package.json'); let v=pkg.version.split('.'); v[2]++; pkg.version=v.join('.'); require('fs').writeFileSync('package.json', JSON.stringify(pkg,null,2)); console.log('✅ Версия:', pkg.version)\" && next build",
@@ -17,7 +17,18 @@
     "android:run": "npm run android:build && npx cap run android"
   },
   "dependencies": {
+    "@capacitor/android": "^5.5.1",
+    "@capacitor/app": "^5.0.6",
+    "@capacitor/cli": "^5.5.1",
+    "@capacitor/core": "^5.5.1",
+    "@capacitor/haptics": "^5.0.6",
+    "@capacitor/keyboard": "^5.0.6",
+    "@capacitor/status-bar": "^5.0.6",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^3.10.0",
+    "@mui/icons-material": "^7.3.6",
+    "@mui/material": "^7.3.6",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -65,14 +76,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "zod": "3.25.76",
-    "@capacitor/android": "^5.5.1",
-    "@capacitor/core": "^5.5.1",
-    "@capacitor/cli": "^5.5.1",
-    "@capacitor/app": "^5.0.6",
-    "@capacitor/haptics": "^5.0.6",
-    "@capacitor/keyboard": "^5.0.6",
-    "@capacitor/status-bar": "^5.0.6"
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
