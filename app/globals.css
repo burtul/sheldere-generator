@@ -137,5 +137,19 @@
     textarea {
       min-height: 44px;
     }
+
+    /* Улучшение взаимодействия для мобильных устройств */
+    [role="button"],
+    button,
+    [type="button"],
+    [type="submit"],
+    [type="reset"] {
+      @apply touch-manipulation;
+    }
+
+    /* Улучшение отображения иконок и интерактивных элементов */
+    svg {
+      @apply touch-pan-x touch-pan-y;
+    }
   }
 }

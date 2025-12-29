@@ -36,8 +36,16 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString('default', { month: 'short' }),
+        formatMonthDropdown: (date) => {
+          // Use fixed month names to avoid locale issues
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          return months[date.getMonth()]
+        },
+        formatWeekdayName: (date) => {
+          // Use Russian weekday names
+          const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+          return weekdays[date.getDay()]
+        },
         ...formatters,
       }}
       classNames={{
@@ -185,12 +193,15 @@ function CalendarDayButton({
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
 
+  // Format date as YYYY-MM-DD to avoid locale issues
+  const formattedDate = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`
+
   return (
     <Button
       ref={ref}
       variant="ghost"
       size="icon"
-      data-day={day.date.toLocaleDateString()}
+      data-day={formattedDate}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&

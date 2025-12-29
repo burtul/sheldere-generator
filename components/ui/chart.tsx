@@ -92,8 +92,7 @@ ${colorConfig
       itemConfig.color
     return color ? `  --color-${key}: ${color};` : null
   })
-  .join('\n')}
-}
+  .join('\n')} }
 `,
           )
           .join('\n'),
@@ -234,7 +233,7 @@ function ChartTooltipContent({
                     </div>
                     {item.value && (
                       <span className="text-foreground font-mono font-medium tabular-nums">
-                        {item.value.toLocaleString()}
+                        {typeof item.value === 'number' ? item.value.toFixed(2) : String(item.value)}
                       </span>
                     )}
                   </div>
