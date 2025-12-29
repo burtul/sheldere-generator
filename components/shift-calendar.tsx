@@ -121,7 +121,7 @@ export function ShiftCalendar({
     if (shift.type === "day") {
       return { "--day-color": globalSettings.dayShiftColor } as React.CSSProperties
     }
-    if (shift.type === "night" || shift.type === "offn" || shift.type === "night2" ) {
+    if (shift.type === "night" || shift.type === "offn" || shift.type === "night2") {
       return { "--night-color": globalSettings.nightShiftColor } as React.CSSProperties
     }
     return {}
@@ -190,7 +190,7 @@ export function ShiftCalendar({
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 text-center">
             Часы сгенерированы автоматически без учета праздников
           </p>
         </div>

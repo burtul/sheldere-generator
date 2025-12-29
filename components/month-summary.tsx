@@ -1,6 +1,6 @@
  "use client"
 
- import { useState, useMemo, useEffect } from "react"
+ import { useState, useMemo, useEffect, useRef } from "react"
  import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
  import { getMonthHours, getWorkDaysInMonth, getMonthHoursFrom1To15, generateSchedule } from "@/lib/schedule-utils"
  import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -46,6 +46,8 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
      const today = new Date()
      return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
    })
+   
+   const processedMonthsRef = useRef<Set<string>>(new Set())
  
    // Синхронизируем displayMonth с currentMonth из календаря
    useEffect(() => {
@@ -54,12 +56,18 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
      }
    }, [currentMonth])
  
+   // Сбрасываем обработанные месяцы при изменении бригады
+   useEffect(() => {
+     processedMonthsRef.current.clear()
+   }, [selectedTeam])
+ 
    const [year, monthNum] = displayMonth.split("-").map(Number)
+   const monthKey = `${year}-${monthNum}`
  
    // Автогенерация смен для текущего месяца, если их нет
    useEffect(() => {
-     if (!selectedTeam || !onGenerateSchedule) return
- 
+     if (!selectedTeam || !onGenerateSchedule || processedMonthsRef.current.has(monthKey)) return
+
      let needsExtension = false
      const daysInMonth = new Date(year, monthNum, 0).getDate()
      for (let day = 1; day <= daysInMonth; day++) {
@@ -69,27 +77,29 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
          break
        }
      }
- 
+
      if (!needsExtension) {
+       processedMonthsRef.current.add(monthKey)
        return
      }
- 
+
      const startDate = new Date(year, monthNum - 1, 1)
      const newShifts = generateSchedule(
        startDate,
-       730,
+       7200,
        selectedTeam as any
      )
- 
+
      onGenerateSchedule(newShifts, startDate)
- 
-   }, [year, monthNum, selectedTeam, onGenerateSchedule])
+     processedMonthsRef.current.add(monthKey)
+
+   }, [year, monthNum, selectedTeam, onGenerateSchedule, monthKey])
  
    // Пересчитываем значения при изменении shifts, displayMonth или monthlySettings
    const { workedHours, workedMinutes, workedHours1To15, workedMinutes1To15, targetHours, difference, advance } = useMemo(() => {
      let totalWorkedMinutes = 0;
      let totalWorkedMinutes1To15 = 0;
- 
+
      shifts.forEach((shift, dateKey) => {
        const [shiftYear, shiftMonth] = dateKey.split("-").map(Number);
        if (shiftYear === year && shiftMonth === monthNum) {
@@ -97,33 +107,33 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
          const hours = (shift.hours !== undefined && !isNaN(shift.hours)) ? shift.hours : 0;
          const minutes = (shift.minutes !== undefined && !isNaN(shift.minutes)) ? shift.minutes : 0;
          const shiftMinutes = hours * 60 + minutes;
- 
+
          totalWorkedMinutes += shiftMinutes;
          if (day <= 15) {
            totalWorkedMinutes1To15 += shiftMinutes;
          }
        }
      });
- 
+
      const totalWorkedHours = Math.floor(totalWorkedMinutes / 60);
      const remainingMinutes = totalWorkedMinutes % 60;
- 
+
      const totalWorkedHours1To15 = Math.floor(totalWorkedMinutes1To15 / 60);
      const remainingMinutes1To15 = totalWorkedMinutes1To15 % 60;
- 
+
      const totalWorkedDecimal = totalWorkedMinutes / 60;
- 
+
      const workDays = getWorkDaysInMonth(year, monthNum - 1);
      const defaultTarget = workDays * 8;
      const target = monthlySettings.get(displayMonth)?.targetHours || defaultTarget;
- 
+
      const diff = target - totalWorkedDecimal;
- 
+
      let adv = 0;
      if (globalSettings.customNumber !== undefined && globalSettings.customNumber > 0 && target > 0) {
        adv = (totalWorkedMinutes1To15 / 60 / target) * globalSettings.customNumber;
      }
- 
+
      return {
        workedHours: totalWorkedHours,
        workedMinutes: remainingMinutes,
@@ -181,7 +191,7 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
            <ChevronRight className="h-6 w-6" />
          </button>
        </div>
- 
+
        <div className="space-y-4">
          <div className="bg-muted/50 rounded-lg p-3">
            <div className="flex justify-between items-center text-base mb-1">
@@ -196,7 +206,7 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
              <span className="text-center flex-1">Всего</span>
            </div>
          </div>
- 
+
          <div className="bg-muted/50 rounded-lg p-3">
            <div className="flex justify-between items-center text-base mb-1">
              <span className="text-muted-foreground">Норма</span>
@@ -211,7 +221,7 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
              </span>
            </div>
          </div>
- 
+
          {globalSettings.customNumber !== undefined && globalSettings.customNumber > 0 && targetHours > 0 && (
            <div className="bg-muted/50 rounded-lg p-3">
              <div className="flex justify-between items-center text-base mb-1">
