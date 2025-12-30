@@ -1,8 +1,8 @@
- "use client"
+  "use client"
 
   import { useState, useMemo, useEffect, useRef } from "react"
   import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
-  import { getMonthHours, getWorkDaysInMonth, getMonthHoursFrom1To15, generateSchedule } from "@/lib/schedule-utils"
+  import { getMonthHours, getWorkDaysInMonth, getMonthHoursFrom1To15, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
   import { ChevronLeft, ChevronRight } from "lucide-react"
 
   interface MonthSummaryProps {
@@ -12,13 +12,15 @@
     currentMonth?: string
     onGenerateSchedule?: (shifts: Map<string, Shift>, startDate: Date) => void
     selectedTeam?: string
+    scheduleType?: "2x2" | "5days"
+    schedule5DayType?: "8hours" | "8-15"
   }
 
   // Вспомогательная функция для форматирования времени с минутами
   function formatTimeWithMinutes(totalHours: number, totalMinutes: number): string {
     const hours = isNaN(totalHours) ? 0 : totalHours;
     const minutes = isNaN(totalMinutes) ? 0 : totalMinutes;
-  
+   
     if (minutes === 0) {
       return `${hours}ч`;
     }
@@ -30,40 +32,40 @@
     if (isNaN(decimalHours)) {
       return "0ч";
     }
-  
+   
     const totalMinutes = Math.round(decimalHours * 60);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-  
+   
     if (minutes === 0) {
       return `${hours}ч`;
     }
     return `${hours}ч ${minutes}м`;
   }
 
- export function MonthSummary({ shifts, monthlySettings, globalSettings, currentMonth, onGenerateSchedule, selectedTeam }: MonthSummaryProps) {
+ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentMonth, onGenerateSchedule, selectedTeam, scheduleType = "2x2", schedule5DayType = "8hours" }: MonthSummaryProps) {
     const [displayMonth, setDisplayMonth] = useState(() => {
       const today = new Date()
       return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
     })
-    
+      
     const processedMonthsRef = useRef<Set<string>>(new Set())
-  
+    
     // Синхронизируем displayMonth с currentMonth из календаря
     useEffect(() => {
       if (currentMonth) {
         setDisplayMonth(currentMonth)
       }
     }, [currentMonth])
-  
+    
     // Сбрасываем обработанные месяцы при изменении бригады
     useEffect(() => {
       processedMonthsRef.current.clear()
-    }, [selectedTeam])
-  
+    }, [selectedTeam, scheduleType, schedule5DayType])
+    
     const [year, monthNum] = displayMonth.split("-").map(Number)
     const monthKey = `${year}-${monthNum}`
-  
+    
     // Автогенерация смен для текущего месяца, если их нет
     useEffect(() => {
       if (!selectedTeam || !onGenerateSchedule || processedMonthsRef.current.has(monthKey)) return
@@ -84,17 +86,27 @@
       }
 
       const startDate = new Date(year, monthNum - 1, 1)
-      const newShifts = generateSchedule(
-        startDate,
-        7200,
-        selectedTeam as any
-      )
+      let newShifts: Map<string, Shift>
+
+      if (scheduleType === "5days") {
+        if (schedule5DayType === "8hours") {
+          newShifts = generate5DaySchedule(startDate, 7200)
+        } else {
+          newShifts = generate5DaySchedule15(startDate, 7200)
+        }
+      } else {
+        newShifts = generateSchedule(
+          startDate,
+          7200,
+          selectedTeam as any
+        )
+      }
 
       onGenerateSchedule(newShifts, startDate)
       processedMonthsRef.current.add(monthKey)
 
-    }, [year, monthNum, selectedTeam, onGenerateSchedule, monthKey])
-  
+    }, [year, monthNum, selectedTeam, onGenerateSchedule, monthKey, scheduleType, schedule5DayType])
+    
     // Пересчитываем значения при изменении shifts, displayMonth или monthlySettings
     const { workedHours, workedMinutes, workedHours1To15, workedMinutes1To15, targetHours, difference, advance } = useMemo(() => {
       let totalWorkedMinutes = 0;
@@ -143,21 +155,21 @@
         difference: diff,
         advance: adv,
       };
-    }, [shifts, displayMonth, monthlySettings, globalSettings.customNumber, year, monthNum]);
-  
+    }, [shifts, displayMonth, monthlySettings, globalSettings.customNumber, year, monthNum, scheduleType, schedule5DayType])
+    
     const handlePrevMonth = () => {
       const date = new Date(year, monthNum - 2, 1);
       setDisplayMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
     };
-  
+    
     const handleNextMonth = () => {
       const date = new Date(year, monthNum, 1);
       setDisplayMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
     };
-  
+    
     const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
     const monthLabel = `${monthNames[monthNum - 1]} ${year}`;
-  
+    
     const getAdvanceColor = () => {
       if (globalSettings.customNumber !== undefined && globalSettings.customNumber > 0) {
         const halfSalary = globalSettings.customNumber / 2;
@@ -169,7 +181,7 @@
       }
       return "text-foreground";
     };
-  
+    
     return (
       <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
         <div className="flex items-center justify-between mb-4">

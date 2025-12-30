@@ -8,10 +8,17 @@ interface TeamSelectorProps {
   teams: string[]
   selectedTeam: string | null
   onTeamSelect: (team: string) => void
+  scheduleType?: "2x2" | "5days"
+  schedule5DayType?: "8hours" | "8-15"
 }
 
-export function TeamSelector({ teams, selectedTeam, onTeamSelect }: TeamSelectorProps) {
+export function TeamSelector({ teams, selectedTeam, onTeamSelect, scheduleType = "2x2", schedule5DayType = "8hours" }: TeamSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  // Определяем доступные команды в зависимости от типа графика
+  const availableTeams = scheduleType === "5days"
+    ? ["8 часов", "8 часов 15 минут"]
+    : teams
 
   return (
     <div className="relative">
@@ -26,7 +33,7 @@ export function TeamSelector({ teams, selectedTeam, onTeamSelect }: TeamSelector
 
       {isOpen && (
         <div className="absolute mt-2 w-full bg-card rounded-lg p-2 border border-border shadow-lg z-50">
-          {teams.map((team) => (
+          {availableTeams.map((team) => (
             <Button
               key={team}
               variant="ghost"

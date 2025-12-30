@@ -7,17 +7,27 @@ import { AlertCircle } from "lucide-react"
 
 interface ScheduleGeneratorProps {
   onGenerate: (shifts: Map<string, any>, startDate: Date) => void
+  scheduleType?: "2x2" | "5days"
 }
 
-export function ScheduleGenerator({ onGenerate }: ScheduleGeneratorProps) {
+export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: ScheduleGeneratorProps) {
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0])
   const [startShift, setStartShift] = useState(0)
   const [years, setYears] = useState(3)
   const [showInfo, setShowInfo] = useState(false)
+  const [schedule5DayType, setSchedule5DayType] = useState("8hours") // "8hours" или "8-15"
 
   const handleGenerate = () => {
     const date = new Date(startDate)
-    const shifts = generateSchedule(date, years, startShift)
+    let teamName: "Бригада 1" | "Бригада 2" | "Бригада 3" | "Бригада 4" | "5 рабочих дней" | "5 рабочих дней 8-15"
+    
+    if (scheduleType === "5days") {
+      teamName = schedule5DayType === "8hours" ? "5 рабочих дней" : "5 рабочих дней 8-15"
+    } else {
+      teamName = `Бригада ${startShift + 1}` as "Бригада 1" | "Бригада 2" | "Бригада 3" | "Бригада 4"
+    }
+    
+    const shifts = generateSchedule(date, years * 365, teamName)
     onGenerate(shifts, date)
   }
 
@@ -47,7 +57,7 @@ export function ScheduleGenerator({ onGenerate }: ScheduleGeneratorProps) {
       {showInfo && (
         <div className="mb-4 p-3 bg-muted/50 rounded-md border border-border">
           <p className="text-xs text-muted-foreground">
-           2 дневные → 2 выходных → 2 ночные → Отсыпной → Выходной
+           {scheduleType === "2x2" ? "2 дневные → 2 выходных → 2 ночные → Отсыпной → Выходной" : schedule5DayType === "8hours" ? "5 рабочих дней (8h) → 2 выходных" : "5 рабочих дней (8h15 Пн-Чт, 7h Пт) → 2 выходных"}
           </p>
         </div>
       )}
@@ -63,20 +73,34 @@ export function ScheduleGenerator({ onGenerate }: ScheduleGeneratorProps) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Тип смены</label>
-          <select
-            value={startShift}
-            onChange={(e) => setStartShift(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
-          >
-            {SHIFT_PATTERN.map((shift, idx) => (
-              <option key={idx} value={idx}>
-                {getShiftLabel(shift, idx)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {scheduleType === "2x2" ? (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Тип смены</label>
+            <select
+              value={startShift}
+              onChange={(e) => setStartShift(Number(e.target.value))}
+              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+            >
+              {SHIFT_PATTERN.map((shift, idx) => (
+                <option key={idx} value={idx}>
+                  {getShiftLabel(shift, idx)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Тип графика</label>
+            <select
+              value={schedule5DayType}
+              onChange={(e) => setSchedule5DayType(e.target.value)}
+              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+            >
+              <option value="8hours">8 часов в день</option>
+              <option value="8-15">8 часов 15 минут Пн-Чт, 7 часов Пт</option>
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">Количество лет</label>

@@ -1,4 +1,4 @@
-export type ShiftType = "day" | "night" | "night2" | "off" | "offn"
+export type ShiftType = "day" | "night" | "night2" | "off" | "offn" | "weekday" | "weekday15" | "weekday7"
 
 export interface Notification {
   id: string
@@ -23,6 +23,7 @@ export interface MonthlySettings {
 export interface GlobalSettings {
   dayShiftColor: string
   nightShiftColor: string
+  offShiftColor: string
   customNumber?: number
 }
 

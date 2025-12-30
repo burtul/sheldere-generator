@@ -45,6 +45,12 @@
          return "Выходной"
        case "offn":
          return "Отсыпной"
+       case "weekday":
+         return "Рабочий8"
+       case "weekday15":
+         return "Рабочий8-15"
+         case "weekday7":
+         return "Рабочий7"
        default:
          return type
      }

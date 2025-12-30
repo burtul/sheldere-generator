@@ -15,24 +15,29 @@ interface GlobalSettingsModalProps {
 
 export function GlobalSettingsModal({ settings, onSave, onGenerate, onClose }: GlobalSettingsModalProps) {
   const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "schedule">("main")
-  const [dayColor, setDayColor] = useState(settings.dayShiftColor)
-  const [nightColor, setNightColor] = useState(settings.nightShiftColor)
+  const [dayColor, setDayColor] = useState(settings.dayShiftColor || "#dc2626")
+  const [nightColor, setNightColor] = useState(settings.nightShiftColor || "#1e293b")
+  const [offColor, setOffColor] = useState(settings.offShiftColor || "#64748b")
   const [customNumber, setCustomNumber] = useState<string>(settings.customNumber?.toString() || "")
 
   const colorPresets = {
     day: ["#dc2626", "#ea580c", "#d97706", "#ca8a04", "#65a30d", "#16a34a", "#059669", "#0d9488", "#0891b2", "#0284c7", "#2563eb", "#4f46e5", "#7c3aed", "#9333ea", "#c026d3", "#db2777", "#e11d48"],
-    night: ["#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9", "#0f172a", "#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1"]
+    night: ["#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9", "#0f172a", "#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1"],
+    off: ["#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9"]
   }
 
   const handleSaveSettings = () => {
     const trimmedValue = customNumber.trim()
     const numValue = trimmedValue === "" ? undefined : parseFloat(trimmedValue)
     
-    onSave({
+    const updatedSettings: GlobalSettings = {
       dayShiftColor: dayColor,
       nightShiftColor: nightColor,
-      customNumber: numValue !== undefined && !isNaN(numValue) ? numValue : undefined,
-    })
+      offShiftColor: offColor,
+      ...(numValue !== undefined && !isNaN(numValue) && { customNumber: numValue })
+    }
+    
+    onSave(updatedSettings)
     setActiveSection("main")
   }
 
@@ -130,6 +135,22 @@ export function GlobalSettingsModal({ settings, onSave, onGenerate, onClose }: G
                       onClick={() => setNightColor(color)}
                       className={`w-8 h-8 rounded-md border-2 transition-all ${
                         nightColor === color ? "border-accent shadow-lg scale-110" : "border-border"
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-3">Цвет выходного дня</label>
+                <div className="flex gap-2 flex-wrap">
+                  {colorPresets.off.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setOffColor(color)}
+                      className={`w-8 h-8 rounded-md border-2 transition-all ${
+                        offColor === color ? "border-accent shadow-lg scale-110" : "border-border"
                       }`}
                       style={{ backgroundColor: color }}
                     />

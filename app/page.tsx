@@ -12,9 +12,9 @@
   import { TeamSelector } from "@/components/team-selector"
   import BurgerMenu from "@/components/burger-menu"
   import type { ScheduleData, MonthlySettings, Shift, GlobalSettings } from "@/lib/types"
-  import { generateSchedule, getWorkDaysInMonth } from "@/lib/schedule-utils"
+  import { generateSchedule, getWorkDaysInMonth, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
   import { loadScheduleData, saveScheduleData } from "@/lib/storage"
-  import { defaultColors } from "@/lib/color-presets"
+  import { defaultColors, colorPresets } from "@/lib/color-presets"
   import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
   import { Menu as MenuIcon } from "@mui/icons-material"
 
@@ -36,6 +36,8 @@
       showMonthProgress: true,
       showTodoList: true
     })
+    const [scheduleType, setScheduleType] = useState<"2x2" | "5days">("2x2")
+    const [schedule5DayType, setSchedule5DayType] = useState<"8hours" | "8-15">("8hours")
 
     useEffect(() => {
       const saved = loadScheduleData()
@@ -53,6 +55,7 @@
           globalSettings: {
             dayShiftColor: defaultColors.dayShift,
             nightShiftColor: defaultColors.nightShift,
+            offShiftColor: "#6b7280",
           },
         })
       }
@@ -73,6 +76,18 @@
       const savedVisibility = localStorage.getItem('visibilitySettings')
       if (savedVisibility) {
         setVisibilitySettings(JSON.parse(savedVisibility))
+      }
+
+      // Загрузка сохраненного типа графика
+      const savedScheduleType = localStorage.getItem('scheduleType')
+      if (savedScheduleType) {
+        setScheduleType(savedScheduleType as "2x2" | "5days")
+      }
+
+      // Загрузка сохраненного типа графика 5 дней
+      const savedSchedule5DayType = localStorage.getItem('schedule5DayType')
+      if (savedSchedule5DayType) {
+        setSchedule5DayType(savedSchedule5DayType as "8hours" | "8-15")
       }
 
       if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -102,6 +117,16 @@
     useEffect(() => {
       localStorage.setItem('visibilitySettings', JSON.stringify(visibilitySettings))
     }, [visibilitySettings])
+
+    // Сохранение типа графика
+    useEffect(() => {
+      localStorage.setItem('scheduleType', scheduleType)
+    }, [scheduleType])
+
+    // Сохранение типа графика 5 дней
+    useEffect(() => {
+      localStorage.setItem('schedule5DayType', schedule5DayType)
+    }, [schedule5DayType])
 
     const handleNotificationDelete = (date: string, notificationId: string) => {
       const newShifts = new Map(scheduleData!.shifts)
@@ -311,7 +336,24 @@
     const handleTeamSelect = (team: string) => {
       setSelectedTeam(team)
       const startDate = new Date(2025, 0, 1)
-      const newShifts = generateSchedule(startDate, 7200, team as any)
+      let newShifts: Map<string, Shift>
+
+      if (scheduleType === "5days") {
+        // Для 5-дневного графика определяем тип по выбранной команде
+        if (team === "8 часов") {
+          setSchedule5DayType("8hours")
+          newShifts = generate5DaySchedule(startDate, 7200)
+        } else if (team === "8 часов 15 минут") {
+          setSchedule5DayType("8-15")
+          newShifts = generate5DaySchedule15(startDate, 7200)
+        } else {
+          // На случай, если выбрана бригада (не должно происходить для 5days)
+          newShifts = generateSchedule(startDate, 7200, team as any)
+        }
+      } else {
+        // Для 2x2 графика используем стандартную генерацию
+        newShifts = generateSchedule(startDate, 7200, team as any)
+      }
 
       // Сохраняем заметки и уведомления из текущих смен
       const preservedShifts = new Map<string, Shift>()
@@ -344,6 +386,108 @@
       setVisibilitySettings(settings)
     }
 
+    const handleScheduleTypeChange = (newType: "2x2" | "5days") => {
+      setScheduleType(newType)
+      const startDate = new Date(2025, 0, 1)
+      let newShifts: Map<string, Shift>
+      let newGlobalSettings: GlobalSettings
+
+      if (newType === "5days") {
+        // При переключении на 5-дневный график устанавливаем команду и цвета по умолчанию
+        if (schedule5DayType === "8hours") {
+          newShifts = generate5DaySchedule(startDate, 7200)
+          setSelectedTeam("8 часов")
+        } else {
+          newShifts = generate5DaySchedule15(startDate, 7200)
+          setSelectedTeam("8 часов 15 минут")
+        }
+        // Устанавливаем цветовую палитру для 5-дневного графика
+        newGlobalSettings = {
+          dayShiftColor: colorPresets.day[0], // Цвет для рабочих дней
+          nightShiftColor: colorPresets.night[0], // Цвет для выходных
+          offShiftColor: colorPresets.night[0],
+        }
+      } else {
+        // При переключении на 2x2 график устанавливаем команду и цвета по умолчанию
+        const defaultTeam = "Бригада 4"
+        setSelectedTeam(defaultTeam)
+        newShifts = generateSchedule(startDate, 7200, defaultTeam)
+        // Устанавливаем цветовую палитру для 2x2 графика
+        newGlobalSettings = {
+          dayShiftColor: defaultColors.dayShift,
+          nightShiftColor: defaultColors.nightShift,
+          offShiftColor: "#6b7280",
+        }
+      }
+
+      // Сохраняем заметки и уведомления из текущих смен
+      const preservedShifts = new Map<string, Shift>()
+      scheduleData.shifts.forEach((shift, date) => {
+        if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
+          const newShift = newShifts.get(date)
+          if (newShift) {
+            preservedShifts.set(date, {
+              ...newShift,
+              notes: shift.notes,
+              notifications: shift.notifications
+            })
+          }
+        }
+      })
+
+      // Объединяем новые смены с сохраненными данными
+      preservedShifts.forEach((shift, date) => {
+        newShifts.set(date, shift)
+      })
+
+      setScheduleData({
+        ...scheduleData,
+        startDate: startDate,
+        shifts: newShifts,
+        globalSettings: newGlobalSettings,
+      })
+    }
+
+    const handleSchedule5DayTypeChange = (newType: "8hours" | "8-15") => {
+      setSchedule5DayType(newType)
+      const startDate = new Date(2025, 0, 1)
+      let newShifts: Map<string, Shift>
+
+      if (newType === "8hours") {
+        newShifts = generate5DaySchedule(startDate, 7200)
+        setSelectedTeam("8 часов")
+      } else {
+        newShifts = generate5DaySchedule15(startDate, 7200)
+        setSelectedTeam("8 часов 15 минут")
+      }
+
+      // Сохраняем заметки и уведомления из текущих смен
+      const preservedShifts = new Map<string, Shift>()
+      scheduleData.shifts.forEach((shift, date) => {
+        if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
+          const newShift = newShifts.get(date)
+          if (newShift) {
+            preservedShifts.set(date, {
+              ...newShift,
+              notes: shift.notes,
+              notifications: shift.notifications
+            })
+          }
+        }
+      })
+
+      // Объединяем новые смены с сохраненными данными
+      preservedShifts.forEach((shift, date) => {
+        newShifts.set(date, shift)
+      })
+
+      setScheduleData({
+        ...scheduleData,
+        startDate: startDate,
+        shifts: newShifts,
+      })
+    }
+
     return (
       <div className="min-h-screen bg-background text-foreground">
         <OfflineIndicator />
@@ -358,6 +502,8 @@
           onGlobalNotesSave={() => setEditingGlobalNotes(true)}
           onVisibilitySettingsSave={handleVisibilitySettingsSave}
           visibilitySettings={visibilitySettings}
+          onScheduleTypeChange={handleScheduleTypeChange}
+          currentScheduleType={scheduleType}
         />
 
         <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-40">
@@ -384,6 +530,8 @@
                   teams={["Бригада 1", "Бригада 2", "Бригада 3", "Бригада 4"]}
                   selectedTeam={selectedTeam}
                   onTeamSelect={handleTeamSelect}
+                  scheduleType={scheduleType}
+                  schedule5DayType={schedule5DayType}
                 />
               </div>
             </div>
@@ -404,6 +552,8 @@
                 onGenerateSchedule={handleGenerateSchedule}
                 selectedTeam={selectedTeam}
                 onCurrentMonthChange={setCurrentMonth}
+                scheduleType={scheduleType}
+                schedule5DayType={schedule5DayType}
               />
             </div>
 
@@ -431,6 +581,8 @@
                     currentMonth={currentMonth || undefined}
                     onGenerateSchedule={handleGenerateSchedule}
                     selectedTeam={selectedTeam || undefined}
+                    scheduleType={scheduleType}
+                    schedule5DayType={schedule5DayType}
                   />
                 </div>
               )}
@@ -509,6 +661,8 @@
             onSave={handleSaveShift}
             onClose={() => setEditingDate(null)}
             formattedDate={formatDateString(editingDate) || ''}
+            scheduleType={scheduleType}
+            schedule5DayType={schedule5DayType}
           />
         )}
 

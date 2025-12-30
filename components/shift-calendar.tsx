@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Edit2, Bell, FileText } from "lucide-react"
 import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getWorkDaysInMonth, generateSchedule } from "@/lib/schedule-utils"
+import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
 
 interface ShiftCalendarProps {
   shifts: Map<string, Shift>
@@ -18,6 +18,8 @@ interface ShiftCalendarProps {
   onGenerateSchedule: (shifts: Map<string, Shift>, startDate: Date) => void
   selectedTeam: string | null
   onCurrentMonthChange?: (month: string) => void
+  scheduleType?: "2x2" | "5days"
+  schedule5DayType?: "8hours" | "8-15"
 }
 
 export function ShiftCalendar({
@@ -31,6 +33,8 @@ export function ShiftCalendar({
   onGenerateSchedule,
   selectedTeam,
   onCurrentMonthChange,
+  scheduleType = "2x2",
+  schedule5DayType = "8hours"
 }: ShiftCalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null)
@@ -74,15 +78,25 @@ export function ShiftCalendar({
     }
 
     const startDate = new Date(year, month, 1)
-    const newShifts = generateSchedule(
-      startDate,
-      180,
-      selectedTeam as any
-    )
+    let newShifts: Map<string, Shift>
+
+    if (scheduleType === "5days") {
+      if (schedule5DayType === "8hours") {
+        newShifts = generate5DaySchedule(startDate, 180)
+      } else {
+        newShifts = generate5DaySchedule15(startDate, 180)
+      }
+    } else {
+      newShifts = generateSchedule(
+        startDate,
+        180,
+        selectedTeam as any
+      )
+    }
 
     onGenerateSchedule(newShifts, startDate)
 
-  }, [year, month, monthKey, daysInMonth, shifts, selectedTeam, onGenerateSchedule, currentDate])
+  }, [year, month, monthKey, daysInMonth, shifts, selectedTeam, onGenerateSchedule, currentDate, scheduleType, schedule5DayType, globalSettings])
 
   const previousMonth = () => {
     const newMonth = currentDate.getMonth() - 1;
@@ -118,12 +132,25 @@ export function ShiftCalendar({
     const shift = shifts.get(dateStr)
     if (!shift) return {}
 
-    if (shift.type === "day") {
-      return { "--day-color": globalSettings.dayShiftColor } as React.CSSProperties
+    if (scheduleType === "5days") {
+      if (shift.type === "weekday" || shift.type === "weekday15" || shift.type === "weekday7") {
+        return { "--work-color": globalSettings.dayShiftColor } as React.CSSProperties
+      }
+      if (shift.type === "off") {
+        return { "--off-color": globalSettings.offShiftColor } as React.CSSProperties
+      }
+    } else {
+      if (shift.type === "day") {
+        return { "--day-color": globalSettings.dayShiftColor } as React.CSSProperties
+      }
+      if (shift.type === "night" || shift.type === "offn" || shift.type === "night2") {
+        return { "--night-color": globalSettings.nightShiftColor } as React.CSSProperties
+      }
+      if (shift.type === "off") {
+        return { "--off-color": globalSettings.offShiftColor } as React.CSSProperties
+      }
     }
-    if (shift.type === "night" || shift.type === "offn" || shift.type === "night2") {
-      return { "--night-color": globalSettings.nightShiftColor } as React.CSSProperties
-    }
+
     return {}
   }
 
@@ -220,8 +247,11 @@ export function ShiftCalendar({
               className={cn(
                 "h-16 sm:h-20 min-w-[25px] sm:min-w-[30px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
                 day ? "hover:shadow-md" : "bg-muted/20",
-                shift?.type === "day" && "bg-[var(--day-color)] text-white",
-                (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white"
+                scheduleType === "5days"
+                  ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white"
+                  : (shift?.type === "day") && "bg-[var(--day-color)] text-white",
+                (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white",
+                shift?.type === "off" && "bg-[var(--off-color)] text-white"
               )}
               style={getShiftStyle(day)}
             >

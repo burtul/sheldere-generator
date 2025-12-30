@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Shift } from '@/lib/types';
+import type { Shift, ShiftType } from '@/lib/types';
 
 interface ShiftEditorProps {
   date: string;
@@ -7,9 +7,26 @@ interface ShiftEditorProps {
   onSave: (shift: Shift) => void;
   onClose: () => void;
   formattedDate: string;
+  scheduleType?: '2x2' | '5days'; // Добавлен новый параметр
+  schedule5DayType?: '8hours' | '8-15'; // Добавлен новый параметр
 }
 
-export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: ShiftEditorProps) {
+// Функция для получения доступных типов смен в зависимости от графика
+function getAvailableShiftTypes(scheduleType?: '2x2' | '5days', schedule5DayType?: '8hours' | '8-15'): ShiftType[] {
+  if (scheduleType === '5days') {
+    // Для 5-дневного графика
+    if (schedule5DayType === '8-15') {
+      return ['weekday15', 'weekday7', 'off'];
+    } else {
+      return ['weekday', 'off'];
+    }
+  } else {
+    // Для 2x2 графика (по умолчанию)
+    return ['day', 'night', 'night2', 'off', 'offn'];
+  }
+}
+
+export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, scheduleType = '2x2', schedule5DayType = '8hours' }: ShiftEditorProps) {
   const [shiftData, setShiftData] = React.useState<Shift>(() =>
     shift || {
       date,
@@ -21,8 +38,11 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
     }
   );
 
+  // Получаем доступные типы смен для текущего графика
+  const availableShiftTypes = getAvailableShiftTypes(scheduleType, scheduleType === '5days' ? schedule5DayType : undefined);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target; 
+    const { name, value } = e.target;
 
     if (name === 'hours') {
       const hoursValue = value.replace(/^0+/, '');
@@ -54,6 +74,16 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
         case 'offn':
           hours = 8;
           break;
+        case 'weekday':
+          hours = 8;
+          break;
+        case 'weekday15':
+          hours = 8;
+          minutes = 15;
+          break;
+        case 'weekday7':
+          hours = 7;
+          break;
         default:
           hours = 0;
           minutes = 0;
@@ -67,6 +97,30 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
   const handleSave = () => {
     onSave(shiftData);
     onClose();
+  };
+
+  // Функция для получения названия типа смены
+  const getShiftTypeName = (type: ShiftType) => {
+    switch (type) {
+      case 'day':
+        return 'Дневная';
+      case 'night':
+        return 'Ночная 1';
+      case 'night2':
+        return 'Ночная 2';
+      case 'off':
+        return 'Выходной';
+      case 'offn':
+        return 'Отсыпной';
+      case 'weekday':
+        return 'Рабочий день';
+      case 'weekday15':
+        return 'Рабочий день (8ч 15м)';
+      case 'weekday7':
+        return 'Рабочий день (7ч)';
+      default:
+        return type;
+    }
   };
 
   return (
@@ -97,11 +151,11 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate }: Shi
               onChange={handleInputChange}
               className="w-full p-2 border border-border rounded-lg bg-background text-foreground"
             >
-              <option value="day">Дневная</option>
-              <option value="night">Ночная 1</option>
-              <option value="night2">Ночная 2</option>
-              <option value="off">Выходной</option>
-              <option value="offn">Отсыпной</option>
+              {availableShiftTypes.map((type) => (
+                <option key={type} value={type}>
+                  {getShiftTypeName(type)}
+                </option>
+              ))}
             </select>
           </div>
 

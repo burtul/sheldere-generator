@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
-import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material"
+import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
 interface BurgerMenuProps {
@@ -16,6 +16,8 @@ interface BurgerMenuProps {
   onGlobalNotesSave: (notes: string) => void
   onVisibilitySettingsSave?: (settings: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }) => void
   visibilitySettings?: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }
+  onScheduleTypeChange?: (scheduleType: "2x2" | "5days") => void
+  currentScheduleType?: "2x2" | "5days"
 }
 
 export default function BurgerMenu({
@@ -27,15 +29,20 @@ export default function BurgerMenu({
   onGlobalSettingsSave,
   onGlobalNotesSave,
   onVisibilitySettingsSave,
-  visibilitySettings = { showShiftInfo: true, showMonthProgress: true, showTodoList: true }
+  visibilitySettings = { showShiftInfo: true, showMonthProgress: true, showTodoList: true },
+  onScheduleTypeChange,
+  currentScheduleType = "2x2",
 }: BurgerMenuProps) {
-  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility">("main")
+  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule">("main")
   const [dayColor, setDayColor] = useState(scheduleData.globalSettings.dayShiftColor)
   const [nightColor, setNightColor] = useState(scheduleData.globalSettings.nightShiftColor)
+  const [offColor, setOffColor] = useState(scheduleData.globalSettings.offShiftColor)
+  const [workColor, setWorkColor] = useState(scheduleData.globalSettings.dayShiftColor)
   const [customNumber, setCustomNumber] = useState<string>(scheduleData.globalSettings.customNumber?.toString() || "")
   const [localVisibilitySettings, setLocalVisibilitySettings] = useState(visibilitySettings)
   const [darkMode, setDarkMode] = useState(false)
   const [openClearDialog, setOpenClearDialog] = useState(false)
+  const [localScheduleType, setLocalScheduleType] = useState(currentScheduleType)
 
   const colorPresets = {
     day: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
@@ -51,6 +58,13 @@ export default function BurgerMenu({
   useEffect(() => {
     setLocalVisibilitySettings(visibilitySettings)
   }, [visibilitySettings])
+
+  useEffect(() => {
+    setLocalScheduleType(currentScheduleType)
+    if (currentScheduleType === "5days") {
+      setWorkColor(dayColor)
+    }
+  }, [currentScheduleType])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -88,10 +102,11 @@ export default function BurgerMenu({
   const handleSaveSettings = () => {
     const trimmedValue = customNumber.trim()
     const numValue = trimmedValue === "" ? undefined : parseFloat(trimmedValue)
-         
+
     onGlobalSettingsSave({
-      dayShiftColor: dayColor,
+      dayShiftColor: localScheduleType === "2x2" ? dayColor : workColor,
       nightShiftColor: nightColor,
+      offShiftColor: offColor,
       customNumber: numValue !== undefined && !isNaN(numValue) ? numValue : undefined,
     })
     setActiveSection("main")
@@ -131,6 +146,14 @@ export default function BurgerMenu({
     setDarkMode(!darkMode)
   }
 
+  const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newType = event.target.value as "2x2" | "5days"
+    setLocalScheduleType(newType)
+    if (onScheduleTypeChange) {
+      onScheduleTypeChange(newType)
+    }
+  }
+
   const handleClearUserData = () => {
     localStorage.clear()
     window.location.reload()
@@ -146,13 +169,21 @@ export default function BurgerMenu({
 
   if (!isOpen) return null
 
+  const getColorsMenuText = () => {
+    if (localScheduleType === "2x2") {
+      return "Цвета смен (бригады)"
+    } else {
+      return "Цвета смен (рабочие/выходные)"
+    }
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <Drawer
         anchor="left"
         open={isOpen}
         onClose={onClose}
-        sx={{ 
+        sx={{
           '& .MuiDrawer-paper': {
             width: 320,
             backgroundColor: theme.palette.background.paper,
@@ -187,11 +218,20 @@ export default function BurgerMenu({
             {activeSection === "main" && (
               <List>
                 <ListItem disablePadding>
+                  <ListItemButton onClick={() => setActiveSection("schedule")}>
+                    <ListItemIcon>
+                      <ScheduleIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText primary="Тип графика" secondary="Выбор графика работы" />
+                  </ListItemButton>
+                </ListItem>
+
+                <ListItem disablePadding>
                   <ListItemButton onClick={() => setActiveSection("colors")}>
                     <ListItemIcon>
                       <PaletteIcon color="primary" />
                     </ListItemIcon>
-                    <ListItemText primary="Цвета смен" secondary="Настройка цветов" />
+                    <ListItemText primary={getColorsMenuText()} secondary="Настройка цветов" />
                   </ListItemButton>
                 </ListItem>
 
@@ -260,51 +300,146 @@ export default function BurgerMenu({
               </List>
             )}
 
+            {/* Schedule Type Section */}
+            {activeSection === "schedule" && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="h6">Тип графика</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Выберите график работы
+                </Typography>
+
+                <FormControl component="fieldset">
+                  <RadioGroup
+                    aria-label="schedule-type"
+                    name="schedule-type"
+                    value={localScheduleType}
+                    onChange={handleScheduleTypeChange}
+                  >
+                    <FormControlLabel
+                      value="2x2"
+                      control={<Radio />}
+                      label="2 через 2 (бригады)"
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
+                      2 дневные → 2 выходных → 2 ночные → Отсыпной → Выходной
+                    </Typography>
+
+                    <FormControlLabel
+                      value="5days"
+                      control={<Radio />}
+                      label="5 рабочих дней"
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
+                      5 рабочих дней (8h) → 2 выходных
+                    </Typography>
+                  </RadioGroup>
+                </FormControl>
+              </Box>
+            )}
+
             {/* Colors Section */}
             {activeSection === "colors" && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Typography variant="h6">Цвета смен</Typography>
 
-                <Box>
-                  <Typography variant="subtitle1" gutterBottom>Цвет дневной смены</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {colorPresets.day.map((color) => (
-                      <Button
-                        key={color}
-                        onClick={() => setDayColor(color)}
-                        sx={{
-                          flex: 1,
-                          minWidth: 'calc(20% - 8px)',
-                          height: 48,
-                          borderRadius: 1,
-                          backgroundColor: color,
-                          border: dayColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
-                          boxShadow: dayColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
-                          transition: 'all 0.3s',
-                          '&:hover': {
-                            transform: 'scale(1.05)',
-                          }
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
+                {localScheduleType === "2x2" ? (
+                  <>
+                    <Box>
+                      <Typography variant="subtitle1" gutterBottom>Цвет дневной смены</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {colorPresets.day.map((color) => (
+                          <Button
+                            key={color}
+                            onClick={() => setDayColor(color)}
+                            sx={{
+                              flex: 1,
+                              minWidth: 'calc(20% - 8px)',
+                              height: 48,
+                              borderRadius: 1,
+                              backgroundColor: color,
+                              border: dayColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                              boxShadow: dayColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="subtitle1" gutterBottom>Цвет ночной смены</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {colorPresets.night.map((color) => (
+                          <Button
+                            key={color}
+                            onClick={() => setNightColor(color)}
+                            sx={{
+                              flex: 1,
+                              minWidth: 'calc(20% - 8px)',
+                              height: 48,
+                              borderRadius: 1,
+                              backgroundColor: color,
+                              border: nightColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                              boxShadow: nightColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  </>
+                ) : (
+                  <>
+                    <Box>
+                      <Typography variant="subtitle1" gutterBottom>Цвет рабочих дней</Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {colorPresets.day.map((color) => (
+                          <Button
+                            key={color}
+                            onClick={() => setWorkColor(color)}
+                            sx={{
+                              flex: 1,
+                              minWidth: 'calc(20% - 8px)',
+                              height: 48,
+                              borderRadius: 1,
+                              backgroundColor: color,
+                              border: workColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                              boxShadow: workColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                              transition: 'all 0.3s',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  </>
+                )}
 
                 <Box>
-                  <Typography variant="subtitle1" gutterBottom>Цвет ночной смены</Typography>
+                  <Typography variant="subtitle1" gutterBottom>Цвет выходных</Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {colorPresets.night.map((color) => (
                       <Button
                         key={color}
-                        onClick={() => setNightColor(color)}
+                        onClick={() => setOffColor(color)}
                         sx={{
                           flex: 1,
                           minWidth: 'calc(20% - 8px)',
                           height: 48,
                           borderRadius: 1,
                           backgroundColor: color,
-                          border: nightColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
-                          boxShadow: nightColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
+                          border: offColor === color ? '2px solid var(--md-sys-color-primary)' : '1px solid var(--md-sys-color-outline)',
+                          boxShadow: offColor === color ? '0 0 0 2px var(--md-sys-color-primary)' : 'none',
                           transition: 'all 0.3s',
                           '&:hover': {
                             transform: 'scale(1.05)',
