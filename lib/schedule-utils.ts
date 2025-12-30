@@ -21,6 +21,10 @@ function getPatternIndex(
   targetDate: Date,
   patternLength: number
 ) {
+  if (patternLength <= 0) {
+    throw new Error("Pattern length must be positive")
+  }
+
   const diffDays = Math.floor(
     (targetDate.getTime() - baseDate.getTime()) / 86400000
   )
@@ -33,14 +37,14 @@ function getPatternIndex(
 export function generateSchedule(
   startDate: Date,
   daysAhead = 365,
-  team: keyof typeof TEAM_PATTERNS | "8 часов" | "8 часов 15 минут" = "Бригада 1"
+  team: keyof typeof TEAM_PATTERNS | "5 рабочих дней" | "5 рабочих дней 8-15" = "Бригада 1"
 ): Map<string, Shift> {
-  const shifts = new Map<string, Shift>()
-  
+  const shifts = new Map<string, Shift>
+
   // Обработка специальных случаев для 5-дневных графиков
-  if (team === "8 часов") {
+  if (team === "5 рабочих дней") {
     return generate5DaySchedule(startDate, daysAhead)
-  } else if (team === "8 часов 15 минут") {
+  } else if (team === "5 рабочих дней 8-15") {
     return generate5DaySchedule15(startDate, daysAhead)
   }
 
@@ -86,7 +90,7 @@ export function generateSchedule(
         hours = 4
         break
       case "night2":
-        hours = 12 
+        hours = 12
         break
       case "offn":
         hours = 8

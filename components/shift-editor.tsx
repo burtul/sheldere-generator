@@ -7,8 +7,8 @@ interface ShiftEditorProps {
   onSave: (shift: Shift) => void;
   onClose: () => void;
   formattedDate: string;
-  scheduleType?: '2x2' | '5days'; // Добавлен новый параметр
-  schedule5DayType?: '8hours' | '8-15'; // Добавлен новый параметр
+  scheduleType?: '2x2' | '5days';
+  schedule5DayType?: '8hours' | '8-15';
 }
 
 // Функция для получения доступных типов смен в зависимости от графика

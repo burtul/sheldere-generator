@@ -181,6 +181,15 @@ export function ShiftCalendar({
     "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
   ]
 
+  // Очистка таймаута при размонтировании компонента
+  useEffect(() => {
+    return () => {
+      if (clickTimeout) {
+        clearTimeout(clickTimeout)
+      }
+    }
+  }, [clickTimeout])
+
   return (
     <div className="bg-card rounded-lg p-4 sm:p-6 border border-border">
       <div className="flex items-center justify-between mb-4 sm:mb-6">

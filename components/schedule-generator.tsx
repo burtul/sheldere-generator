@@ -15,18 +15,18 @@ export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: Schedule
   const [startShift, setStartShift] = useState(0)
   const [years, setYears] = useState(3)
   const [showInfo, setShowInfo] = useState(false)
-  const [schedule5DayType, setSchedule5DayType] = useState("8hours") // "8hours" или "8-15"
+  const [schedule5DayType, setSchedule5DayType] = useState<"8hours" | "8-15">("8hours")
 
   const handleGenerate = () => {
     const date = new Date(startDate)
     let teamName: "Бригада 1" | "Бригада 2" | "Бригада 3" | "Бригада 4" | "5 рабочих дней" | "5 рабочих дней 8-15"
-    
+
     if (scheduleType === "5days") {
       teamName = schedule5DayType === "8hours" ? "5 рабочих дней" : "5 рабочих дней 8-15"
     } else {
       teamName = `Бригада ${startShift + 1}` as "Бригада 1" | "Бригада 2" | "Бригада 3" | "Бригада 4"
     }
-    
+
     const shifts = generateSchedule(date, years * 365, teamName)
     onGenerate(shifts, date)
   }
@@ -93,7 +93,7 @@ export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: Schedule
             <label className="block text-sm font-medium text-foreground mb-2">Тип графика</label>
             <select
               value={schedule5DayType}
-              onChange={(e) => setSchedule5DayType(e.target.value)}
+              onChange={(e) => setSchedule5DayType(e.target.value as "8hours" | "8-15")}
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
             >
               <option value="8hours">8 часов в день</option>
