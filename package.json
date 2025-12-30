@@ -1,6 +1,6 @@
 {
   "name": "Мой график",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "private": true,
   "scripts": {
     "build": "node -e \"let pkg=require('./package.json'); let v=pkg.version.split('.'); v[2]++; pkg.version=v.join('.'); require('fs').writeFileSync('package.json', JSON.stringify(pkg,null,2)); console.log('✅ Версия:', pkg.version)\" && next build",
@@ -64,7 +64,7 @@
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "16.0.0",
+    "next": "^16.1.1",
     "next-themes": "^0.4.6",
     "react": "19.2.0",
     "react-day-picker": "9.8.0",

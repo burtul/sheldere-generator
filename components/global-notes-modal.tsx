@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface GlobalNotesModalProps {
   notes: string;
   onSave: (notes: string) => void;
   onClose: () => void;
+  completedTodos?: Set<number>;
+  onTodoToggle?: (index: number) => void;
 }
 
 interface TodoItem {
@@ -11,7 +13,7 @@ interface TodoItem {
   completed: boolean;
 }
 
-export function GlobalNotesModal({ notes, onSave, onClose }: GlobalNotesModalProps) {
+export function GlobalNotesModal({ notes, onSave, onClose, completedTodos, onTodoToggle }: GlobalNotesModalProps) {
   const [todos, setTodos] = useState<TodoItem[]>(() => {
     const lines = notes ? notes.split('\n').filter(n => n.trim() !== '') : [];
     return lines.map(line => {
@@ -37,6 +39,9 @@ export function GlobalNotesModal({ notes, onSave, onClose }: GlobalNotesModalPro
   };
 
   const handleToggleTodo = (index: number) => {
+    if (onTodoToggle) {
+      onTodoToggle(index);
+    }
     const updatedTodos = todos.map((todo, i) =>
       i === index ? { ...todo, completed: !todo.completed } : todo
     );
@@ -50,6 +55,18 @@ export function GlobalNotesModal({ notes, onSave, onClose }: GlobalNotesModalPro
     onSave(formattedTodos);
     onClose();
   };
+
+  useEffect(() => {
+    if (completedTodos && completedTodos.size > 0) {
+      const updatedTodos = todos.map((todo, index) => ({
+        ...todo,
+        completed: completedTodos.has(index)
+      }));
+      setTodos(updatedTodos);
+    }
+  }, [completedTodos]);
+
+  const memoizedTodos = useMemo(() => todos, [todos]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -83,16 +100,16 @@ export function GlobalNotesModal({ notes, onSave, onClose }: GlobalNotesModalPro
           </div>
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {todos.map((todo, index) => (
+            {memoizedTodos.map((todo, index) => (
               <div key={index} className="flex items-center gap-2 p-2 border border-border rounded-lg bg-background">
                 <input
                   type="checkbox"
-                  checked={todo.completed}
+                  checked={completedTodos ? completedTodos.has(index) : todo.completed}
                   onChange={() => handleToggleTodo(index)}
                   className="h-4 w-4"
                 />
                 <span
-                  className={`flex-1 text-foreground ${todo.completed ? 'line-through text-muted-foreground' : ''}`}
+                  className={`flex-1 text-foreground ${completedTodos ? completedTodos.has(index) : todo.completed ? 'line-through text-muted-foreground' : ''}`}
                 >
                   {todo.text}
                 </span>

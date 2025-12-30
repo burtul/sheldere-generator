@@ -517,6 +517,8 @@
             notes={scheduleData.globalNotes || ''}
             onSave={handleSaveGlobalNotes}
             onClose={() => setEditingGlobalNotes(false)}
+            completedTodos={completedTodos}
+            onTodoToggle={handleTodoToggle}
           />
         )}
       </div>
