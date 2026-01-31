@@ -13,6 +13,8 @@ export interface Shift {
   minutes: number
   notes?: string
   notifications?: Notification[]
+  isHoliday?: boolean
+  holidayHours?: number
 }
 
 export interface MonthlySettings {
@@ -34,3 +36,15 @@ export interface ScheduleData {
   globalSettings: GlobalSettings
   globalNotes?: string
 }
+
+export interface Holiday {
+  id: string
+  name: string
+  date: string // YYYY-MM-DD format
+  type: "national" | "regional" | "religious" | "custom"
+  region?: string // Optional region code or name
+  isRecurring: boolean
+  description?: string
+}
+
+export type HolidaysData = Holiday[]

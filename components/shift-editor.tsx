@@ -22,7 +22,7 @@ function getAvailableShiftTypes(scheduleType?: '2x2' | '5days', schedule5DayType
     }
   } else {
     // Для 2x2 графика (по умолчанию)
-    return ['day', 'night', 'night2', 'off', 'offn'];
+    return ['day', 'night', 'night2', 'offn', 'off'];
   }
 }
 
