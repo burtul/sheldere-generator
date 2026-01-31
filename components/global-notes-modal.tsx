@@ -1,84 +1,153 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 
 interface GlobalNotesModalProps {
   notes: string;
   onSave: (notes: string) => void;
   onClose: () => void;
+  /** Если внешний компонент передаёт состояние завершённых задач, то это Set индексов задач */
   completedTodos?: Set<number>;
+  /** Сигнатура: индекс задачи */
   onTodoToggle?: (index: number) => void;
+  /** Callback для обновления состояния задач */
+  onTodosUpdate?: (todos: TodoItem[]) => void;
 }
 
 interface TodoItem {
+  id: string;
   text: string;
   completed: boolean;
 }
 
-export function GlobalNotesModal({ notes, onSave, onClose, completedTodos, onTodoToggle }: GlobalNotesModalProps) {
+const makeId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+export function GlobalNotesModal({
+  notes,
+  onSave,
+  onClose,
+  completedTodos,
+  onTodoToggle,
+  onTodosUpdate
+}: GlobalNotesModalProps) {
+  // Инициализация todos из notes
   const [todos, setTodos] = useState<TodoItem[]>(() => {
     const lines = notes ? notes.split('\n').filter(n => n.trim() !== '') : [];
-    return lines.map(line => {
-      const isCompleted = line.startsWith('[x]');
+    return lines.map((line, index) => {
+      const hasXPrefix = line.trim().startsWith('[x]');
+      const text = hasXPrefix ? line.trim().substring(3).trim() : line.trim();
+      const isCompletedFromParent = completedTodos?.has(index) || false;
+      
       return {
-        text: isCompleted ? line.substring(3).trim() : line,
-        completed: isCompleted
+        id: makeId(),
+        text,
+        completed: isCompletedFromParent || hasXPrefix
       };
     });
   });
+
   const [newTodo, setNewTodo] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
-  const handleAddTodo = () => {
-    if (newTodo.trim() !== '') {
-      setTodos([...todos, { text: newTodo, completed: false }]);
-      setNewTodo('');
-    }
-  };
+  // Добавление задачи
+  const handleAddTodo = useCallback(() => {
+    const text = newTodo.trim();
+    if (text === '') return;
+    const item: TodoItem = { 
+      id: makeId(), 
+      text, 
+      completed: false 
+    };
+    setTodos(prev => [...prev, item]);
+    setNewTodo('');
+  }, [newTodo]);
 
-  const handleDeleteTodo = (index: number) => {
-    const updatedTodos = todos.filter((_, i) => i !== index);
-    setTodos(updatedTodos);
-  };
+  // Редактирование
+  const handleEditTodoById = useCallback((id: string, newText: string) => {
+    const text = newText.trim();
+    if (text === '') return;
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, text } : t)));
+  }, []);
 
-  const handleToggleTodo = (index: number) => {
-    if (onTodoToggle) {
-      onTodoToggle(index);
-    }
-    const updatedTodos = todos.map((todo, i) =>
-      i === index ? { ...todo, completed: !todo.completed } : todo
-    );
-    setTodos(updatedTodos);
-  };
+  // Удаление
+  const handleDeleteTodoById = useCallback((id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+  }, []);
 
-  const handleSave = () => {
-    const formattedTodos = todos.map(todo =>
-      todo.completed ? `[x] ${todo.text}` : todo.text
-    ).join('\n');
-    onSave(formattedTodos);
+   // Переключение чекбокса
+  const handleToggleTodoById = useCallback((id: string) => {
+    setTodos(prev => {
+      const updated = prev.map(t => 
+        t.id === id ? { ...t, completed: !t.completed } : t
+      );
+       
+      return updated;
+    });
+  }, []);
+
+   // Перемещение вверх
+  const handleMoveTodoUp = useCallback((id: string) => {
+    setTodos(prev => {
+      const currentIndex = prev.findIndex(t => t.id === id);
+      if (currentIndex <= 0) return prev;
+       
+      const newTodos = [...prev];
+      [newTodos[currentIndex], newTodos[currentIndex - 1]] = 
+      [newTodos[currentIndex - 1], newTodos[currentIndex]];
+       
+      return newTodos;
+    });
+  }, []);
+
+   // Перемещение вниз
+  const handleMoveTodoDown = useCallback((id: string) => {
+    setTodos(prev => {
+      const currentIndex = prev.findIndex(t => t.id === id);
+      if (currentIndex < 0 || currentIndex >= prev.length - 1) return prev;
+       
+      const newTodos = [...prev];
+      [newTodos[currentIndex], newTodos[currentIndex + 1]] = 
+      [newTodos[currentIndex + 1], newTodos[currentIndex]];
+       
+      return newTodos;
+    });
+  }, []);
+
+   // Сохранение
+  const handleSave = useCallback(() => {
+    // Сохраняем только тексты
+    const formatted = todos.map(t => t.text).join('\n');
+    onSave(formatted);
+      
+    // Уведомляем родителя о текущем состоянии задач
+    const completedIndices = new Set<number>();
+    todos.forEach((todo, index) => {
+      if (todo.completed) {
+        completedIndices.add(index);
+      }
+    });
+    onTodosUpdate?.(todos);
     onClose();
-  };
+  }, [todos, onSave, onClose, onTodosUpdate]);
 
-  useEffect(() => {
-    if (completedTodos && completedTodos.size > 0) {
-      const updatedTodos = todos.map((todo, index) => ({
-        ...todo,
-        completed: completedTodos.has(index)
-      }));
-      setTodos(updatedTodos);
-    }
-  }, [completedTodos]);
+  // Коммит редактирования
+  const commitEdit = useCallback(() => {
+    if (!editingId) return;
+    if (editingText.trim() !== '') handleEditTodoById(editingId, editingText);
+    setEditingId(null);
+  }, [editingId, editingText, handleEditTodoById]);
 
-  const memoizedTodos = useMemo(() => todos, [todos]);
+  const remainingCount = useMemo(() => 
+    todos.filter(t => !t.completed).length, 
+    [todos]
+  );
+
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border">
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div className="rounded-lg p-6 w-full max-w-md border border-border" style={{ backgroundColor: 'var(--md-sys-color-surface, #FFFBFE)' }}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-foreground">Список дел</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ×
-          </button>
+          <button onClick={onClose} aria-label="Закрыть" className="text-muted-foreground hover:text-foreground">×</button>
         </div>
 
         <div className="space-y-4">
@@ -87,9 +156,10 @@ export function GlobalNotesModal({ notes, onSave, onClose, completedTodos, onTod
               type="text"
               value={newTodo}
               onChange={(e) => setNewTodo(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
               placeholder="Добавить новую задачу"
               className="flex-1 p-2 border border-border rounded-lg bg-background text-foreground"
+              aria-label="Новая задача"
             />
             <button
               onClick={handleAddTodo}
@@ -99,23 +169,92 @@ export function GlobalNotesModal({ notes, onSave, onClose, completedTodos, onTod
             </button>
           </div>
 
+          <div className="text-sm text-muted-foreground">
+            Осталось: <strong className="text-foreground">{remainingCount}</strong>
+          </div>
+
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {memoizedTodos.map((todo, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 border border-border rounded-lg bg-background">
+            {todos.map((todo, index) => (
+              <div key={todo.id} className="flex items-center gap-2 p-2 border border-border rounded-lg bg-background">
                 <input
                   type="checkbox"
-                  checked={completedTodos ? completedTodos.has(index) : todo.completed}
-                  onChange={() => handleToggleTodo(index)}
+                  checked={todo.completed}
+                  onChange={() => handleToggleTodoById(todo.id)}
                   className="h-4 w-4"
+                  aria-label={`Отметить задачу ${todo.text}`}
                 />
-                <span
-                  className={`flex-1 text-foreground ${completedTodos ? completedTodos.has(index) : todo.completed ? 'line-through text-muted-foreground' : ''}`}
-                >
-                  {todo.text}
-                </span>
+
+                 {editingId === todo.id ? (
+                   <input
+                     type="text"
+                     value={editingText}
+                     onChange={(e) => setEditingText(e.target.value)}
+                     onBlur={commitEdit}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter') commitEdit();
+                       if (e.key === 'Escape') setEditingId(null);
+                     }}
+                     className="flex-1 p-1 border border-border rounded-lg bg-background text-foreground"
+                     aria-label="Редактирование задачи"
+                     autoFocus
+                   />
+                 ) : (
+                   <span
+                     className={`flex-1 text-foreground ${todo.completed ? 'line-through text-muted-foreground' : ''}`}
+                     onDoubleClick={() => {
+                       setEditingId(todo.id);
+                       setEditingText(todo.text);
+                     }}
+                     title="Двойной клик для редактирования"
+                   >
+                     {todo.text}
+                   </span>
+                 )}
+
                 <button
-                  onClick={() => handleDeleteTodo(index)}
+                  onClick={() => handleMoveTodoUp(todo.id)}
                   className="text-muted-foreground hover:text-foreground"
+                  disabled={index === 0}
+                  aria-label="Переместить вверх"
+                  title="Вверх"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => handleMoveTodoDown(todo.id)}
+                  className="text-muted-foreground hover:text-foreground"
+                  disabled={index === todos.length - 1}
+                  aria-label="Переместить вниз"
+                  title="Вниз"
+                >
+                  ↓
+                </button>
+                {editingId === todo.id && (
+                  <button
+                    onClick={commitEdit}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Сохранить изменения"
+                    title="Сохранить"
+                  >
+                    💾
+                  </button>
+                )}
+                 <button
+                   onClick={() => {
+                     setEditingId(todo.id);
+                     setEditingText(todo.text);
+                   }}
+                   className="text-muted-foreground hover:text-foreground"
+                   aria-label="Редактировать"
+                   title="Редактировать"
+                 >
+                   ✏️
+                 </button>
+                <button
+                  onClick={() => handleDeleteTodoById(todo.id)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Удалить"
+                  title="Удалить"
                 >
                   ×
                 </button>

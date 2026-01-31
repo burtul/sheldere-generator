@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { ChevronLeft, ChevronRight, Edit2, Bell, FileText } from "lucide-react"
-import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
+import type { Shift, MonthlySettings, GlobalSettings, Holiday } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
@@ -62,6 +62,44 @@ export function ShiftCalendar({
   for (let i = 0; i < adjustedStartingDay; i++) days.push(null)
   for (let i = 1; i <= daysInMonth; i++) days.push(i)
 
+  // Мемоизируем праздники для текущего года для производительности
+  const holidaysForYear = useMemo(() => {
+    // Всегда генерируем праздники для текущего года
+    // Если в exampleHolidays уже есть праздники для этого года, используем их
+    const existingHolidays = exampleHolidays.filter(h => 
+      new Date(h.date).getFullYear() === year
+    )
+    
+    if (existingHolidays.length > 0) {
+      return existingHolidays
+    }
+    
+    // Иначе генерируем новые праздники
+    return generateHolidaysForYear(year)
+  }, [year])
+
+  // Функция для проверки, является ли день сегодняшним
+  const isToday = (day: number) => {
+    const today = new Date()
+    return (
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear()
+    )
+  }
+
+  // Функция для проверки праздников - работает с мемоизированными данными
+  const isHoliday = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    return holidaysForYear.some(holiday => holiday.date === dateStr)
+  }
+
+  // Функция для получения информации о празднике
+  const getHolidayInfo = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    return holidaysForYear.find(holiday => holiday.date === dateStr) || null
+  }
+
   useEffect(() => {
     if (!selectedTeam) return
 
@@ -100,25 +138,25 @@ export function ShiftCalendar({
   }, [year, month, monthKey, daysInMonth, shifts, selectedTeam, onGenerateSchedule, currentDate, scheduleType, schedule5DayType, globalSettings])
 
   const previousMonth = () => {
-    const newMonth = currentDate.getMonth() - 1;
-    const newYear = currentDate.getFullYear();
+    const newMonth = currentDate.getMonth() - 1
+    const newYear = currentDate.getFullYear()
     if (newMonth < 0) {
-      setCurrentDate(new Date(newYear - 1, 11, 1));
+      setCurrentDate(new Date(newYear - 1, 11, 1))
     } else {
-      setCurrentDate(new Date(newYear, newMonth, 1));
+      setCurrentDate(new Date(newYear, newMonth, 1))
     }
-    onDateSelect(null);
+    onDateSelect(null)
   }
 
   const nextMonth = () => {
-    const newMonth = currentDate.getMonth() + 1;
-    const newYear = currentDate.getFullYear();
+    const newMonth = currentDate.getMonth() + 1
+    const newYear = currentDate.getFullYear()
     if (newMonth > 11) {
-      setCurrentDate(new Date(newYear + 1, 0, 1));
+      setCurrentDate(new Date(newYear + 1, 0, 1))
     } else {
-      setCurrentDate(new Date(newYear, newMonth, 1));
+      setCurrentDate(new Date(newYear, newMonth, 1))
     }
-    onDateSelect(null);
+    onDateSelect(null)
   }
 
   useEffect(() => {
@@ -156,16 +194,10 @@ export function ShiftCalendar({
   }
 
   const getShiftInfo = (day: number | null) => {
-  if (!day) return null
-  const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-  return shifts.get(dateStr) || null
-}
-const isHoliday = (day: number | null): boolean => {
-  if (!day) return false
-  const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-  const shift = shifts.get(dateStr)
-  return !!shift?.isHoliday
-}
+    if (!day) return null
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    return shifts.get(dateStr) || null
+  }
 
   const handleDateClick = (dateStr: string) => {
     if (clickTimeout) {
@@ -250,45 +282,57 @@ const isHoliday = (day: number | null): boolean => {
           </div>
         ))}
 
-          {days.map((day, idx) => {
-            const shift = getShiftInfo(day)
-            const dateStr = day
-              ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-              : null
-            const holiday = isHoliday(day)
+        {days.map((day, idx) => {
+          const shift = getShiftInfo(day)
+          const dateStr = day
+            ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+            : null
+          
+          // Проверяем только если день существует (не null)
+          const holiday = day ? isHoliday(day) : false
+          const today = day ? isToday(day) : false
 
-            return (
-              <div
-                key={idx}
-                onClick={() => day && dateStr && handleDateClick(dateStr)}
-                className={cn(
-                  "h-16 sm:h-20 min-w-[25px] sm:min-w-[30px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
-                  day ? "hover:shadow-md" : "bg-muted/20",
-                  holiday && "bg-red-500 text-white",
-                  scheduleType === "5days"
-                    ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white"
-                    : (shift?.type === "day") && "bg-[var(--day-color)] text-white",
-                  (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white",
-                  shift?.type === "off" && "bg-[var(--off-color)] text-white"
-                )}
-                style={getShiftStyle(day)}
-              >
-                {day && <span className="text-xs sm:text-sm font-semibold">{day}</span>}
-                {shift && (shift.hours > 0 || shift.minutes > 0) && (
-                  <span className="text-xs text-center w-full">
-                    {shift.hours > 0 && `${shift.hours}h`}
-                    {shift.minutes > 0 && ` ${shift.minutes}m`}
-                  </span>
-                )}
-                {hasNotifications(shift) && (
-                  <Bell className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
-                )}
-                {shift?.notes && !hasNotifications(shift) && (
-                  <FileText className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-accent" />
-                )}
-              </div>
-            )
-          })}
+          return (
+            <div
+              key={idx}
+              onClick={() => day && dateStr && handleDateClick(dateStr)}
+              className={cn(
+                "aspect-square min-h-[36px] sm:min-h-[44px] rounded-2xl p-1 sm:p-1.5 cursor-pointer flex flex-col items-center justify-center relative transition-all duration-150",
+                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
+                day && !shift && "bg-muted/20 hover:bg-muted/30",
+                today && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                scheduleType === "5days"
+                  ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white shadow-sm"
+                  : (shift?.type === "day") && "bg-[var(--day-color)] text-white shadow-sm",
+                (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white shadow-sm",
+                shift?.type === "off" && "bg-[var(--off-color)] text-white/90"
+              )}
+              style={getShiftStyle(day)}
+            >
+              {day && (
+                <span className={cn(
+                  "text-xs sm:text-sm font-medium", 
+                  shift && "drop-shadow-sm",
+                  holiday && "text-red-500 font-bold" // Только красный цвет числа
+                )}>
+                  {day}
+                </span>
+              )}
+              {shift && (shift.hours > 0 || shift.minutes > 0) && (
+                <span className="text-xs text-center w-full">
+                  {shift.hours > 0 && `${shift.hours}h`}
+                  {shift.minutes > 0 && ` ${shift.minutes}m`}
+                </span>
+              )}
+              {hasNotifications(shift) && (
+                <Bell className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+              )}
+              {shift?.notes && !hasNotifications(shift) && (
+                <FileText className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-accent" />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

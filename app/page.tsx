@@ -618,16 +618,22 @@
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <Plus className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">Нет задач</p>
-                      <button
-                        onClick={() => setEditingGlobalNotes(true)}
-                        className="mt-2 text-sm text-primary hover:underline"
-                      >
-                        Добавить первую задачу
-                      </button>
-                    </div>
+                   <div className="flex flex-col items-center justify-center py-8">
+                     <button
+                       onClick={() => setEditingGlobalNotes(true)}
+                       className="mb-2 p-2 hover:bg-muted rounded transition-colors"
+                       title="Добавить первую задачу"
+                     >
+                       <Plus className="h-8 w-8 text-muted-foreground" />
+                     </button>
+                     <p className="text-sm text-muted-foreground">Нет задач</p>
+                     <button
+                       onClick={() => setEditingGlobalNotes(true)}
+                       className="mt-2 text-sm text-primary hover:underline"
+                     >
+                       Добавить первую задачу
+                     </button>
+                   </div>
                   )}
                 </div>
               )}
@@ -666,13 +672,22 @@
           />
         )}
 
-        {editingGlobalNotes && (
+         {editingGlobalNotes && (
           <GlobalNotesModal
             notes={scheduleData.globalNotes || ''}
             onSave={handleSaveGlobalNotes}
             onClose={() => setEditingGlobalNotes(false)}
             completedTodos={completedTodos}
             onTodoToggle={handleTodoToggle}
+            onTodosUpdate={(updatedTodos) => {
+              const newCompletedTodos = new Set<number>();
+              updatedTodos.forEach((todo, index) => {
+                if (todo.completed) {
+                  newCompletedTodos.add(index);
+                }
+              });
+              setCompletedTodos(newCompletedTodos);
+            }}
           />
         )}
       </div>
