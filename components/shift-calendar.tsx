@@ -6,6 +6,7 @@ import type { Shift, MonthlySettings, GlobalSettings } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
+import { exampleHolidays, generateHolidaysForYear } from "@/lib/holidays"
 
 interface ShiftCalendarProps {
   shifts: Map<string, Shift>
@@ -155,10 +156,16 @@ export function ShiftCalendar({
   }
 
   const getShiftInfo = (day: number | null) => {
-    if (!day) return null
-    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-    return shifts.get(dateStr) || null
-  }
+  if (!day) return null
+  const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  return shifts.get(dateStr) || null
+}
+const isHoliday = (day: number | null): boolean => {
+  if (!day) return false
+  const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  const shift = shifts.get(dateStr)
+  return !!shift?.isHoliday
+}
 
   const handleDateClick = (dateStr: string) => {
     if (clickTimeout) {
@@ -243,43 +250,45 @@ export function ShiftCalendar({
           </div>
         ))}
 
-        {days.map((day, idx) => {
-          const shift = getShiftInfo(day)
-          const dateStr = day
-            ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-            : null
+          {days.map((day, idx) => {
+            const shift = getShiftInfo(day)
+            const dateStr = day
+              ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+              : null
+            const holiday = isHoliday(day)
 
-          return (
-            <div
-              key={idx}
-              onClick={() => day && dateStr && handleDateClick(dateStr)}
-              className={cn(
-                "h-16 sm:h-20 min-w-[25px] sm:min-w-[30px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
-                day ? "hover:shadow-md" : "bg-muted/20",
-                scheduleType === "5days"
-                  ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white"
-                  : (shift?.type === "day") && "bg-[var(--day-color)] text-white",
-                (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white",
-                shift?.type === "off" && "bg-[var(--off-color)] text-white"
-              )}
-              style={getShiftStyle(day)}
-            >
-              {day && <span className="text-xs sm:text-sm font-semibold">{day}</span>}
-              {shift && (shift.hours > 0 || shift.minutes > 0) && (
-                <span className="text-xs text-center w-full">
-                  {shift.hours > 0 && `${shift.hours}h`}
-                  {shift.minutes > 0 && ` ${shift.minutes}m`}
-                </span>
-              )}
-              {hasNotifications(shift) && (
-                <Bell className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
-              )}
-              {shift?.notes && !hasNotifications(shift) && (
-                <FileText className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-accent" />
-              )}
-            </div>
-          )
-        })}
+            return (
+              <div
+                key={idx}
+                onClick={() => day && dateStr && handleDateClick(dateStr)}
+                className={cn(
+                  "h-16 sm:h-20 min-w-[25px] sm:min-w-[30px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
+                  day ? "hover:shadow-md" : "bg-muted/20",
+                  holiday && "bg-red-500 text-white",
+                  scheduleType === "5days"
+                    ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white"
+                    : (shift?.type === "day") && "bg-[var(--day-color)] text-white",
+                  (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white",
+                  shift?.type === "off" && "bg-[var(--off-color)] text-white"
+                )}
+                style={getShiftStyle(day)}
+              >
+                {day && <span className="text-xs sm:text-sm font-semibold">{day}</span>}
+                {shift && (shift.hours > 0 || shift.minutes > 0) && (
+                  <span className="text-xs text-center w-full">
+                    {shift.hours > 0 && `${shift.hours}h`}
+                    {shift.minutes > 0 && ` ${shift.minutes}m`}
+                  </span>
+                )}
+                {hasNotifications(shift) && (
+                  <Bell className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+                )}
+                {shift?.notes && !hasNotifications(shift) && (
+                  <FileText className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-accent" />
+                )}
+              </div>
+            )
+          })}
       </div>
     </div>
   )
