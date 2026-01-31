@@ -275,30 +275,32 @@ export function ShiftCalendar({
         </Button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 sm:gap-2">
-        {weekDays.map(d => (
-          <div key={d} className="text-center text-xs sm:text-sm font-semibold py-1 sm:py-2">
-            {d}
-          </div>
-        ))}
+       <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+         {weekDays.map(d => (
+           <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">
+             {d}
+           </div>
+         ))}
 
-        {days.map((day, idx) => {
-          const shift = getShiftInfo(day)
-          const dateStr = day
-            ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-            : null
-          
+         {days.map((day, idx) => {
+           const shift = getShiftInfo(day)
+           const dateStr = day
+             ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+             : null
+           
           // Проверяем только если день существует (не null)
           const holiday = day ? isHoliday(day) : false
           const today = day ? isToday(day) : false
-
+          
           return (
             <div
               key={idx}
               onClick={() => day && dateStr && handleDateClick(dateStr)}
               className={cn(
-                "aspect-square min-h-[36px] sm:min-h-[44px] rounded-2xl p-1 sm:p-1.5 cursor-pointer flex flex-col items-center justify-center relative transition-all duration-150",
-                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
+"aspect-square rounded-lg p-1 sm:p-2 cursor-pointer transition-all relative",
+                "flex flex-col justify-center items-center border border-border/50",
+                "min-h-[40px] sm:min-h-[50px] md:min-h-[60px]",
+                day ? "hover:border-primary/50 hover:shadow-sm bg-card" : "bg-muted/10",                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
                 day && !shift && "bg-muted/20 hover:bg-muted/30",
                 today && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                 scheduleType === "5days"
