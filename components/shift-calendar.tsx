@@ -297,7 +297,7 @@ export function ShiftCalendar({
               key={idx}
               onClick={() => day && dateStr && handleDateClick(dateStr)}
               className={cn(
- "h-16 sm:h-20 min-w-[25px] sm:min-w-[30px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
+"h-16 sm:h-20 min-w-[40px] sm:min-w-[50px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
                 day ? "hover:border-primary/50 hover:shadow-sm bg-card" : "bg-muted/10",                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
                 day && !shift && "bg-muted/20 hover:bg-muted/30",
                 today && "ring-2 ring-primary ring-offset-2 ring-offset-background",
