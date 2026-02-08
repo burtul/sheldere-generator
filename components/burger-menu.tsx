@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon } from "@mui/icons-material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
+import VacationDialog from "./vacation-dialog"
+import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -18,6 +20,12 @@ interface BurgerMenuProps {
   visibilitySettings?: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }
   onScheduleTypeChange?: (scheduleType: "2x2" | "5days") => void
   currentScheduleType?: "2x2" | "5days"
+  vacations?: { startDate: Date; days: number }[]
+  onVacationSave?: (vacation: { startDate: Date; days: number }) => void
+  onVacationDelete?: (index: number) => void
+
+
+
 }
 
 export default function BurgerMenu({
@@ -25,15 +33,17 @@ export default function BurgerMenu({
   isClosing,
   scheduleData,
   onClose,
-  onBackdropClick,
   onGlobalSettingsSave,
   onGlobalNotesSave,
   onVisibilitySettingsSave,
   visibilitySettings = { showShiftInfo: true, showMonthProgress: true, showTodoList: true },
   onScheduleTypeChange,
   currentScheduleType = "2x2",
+  onVacationSave,
+  onVacationDelete,
+  vacations = [],
 }: BurgerMenuProps) {
-  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule">("main")
+  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
   const [dayColor, setDayColor] = useState(scheduleData.globalSettings.dayShiftColor)
   const [nightColor, setNightColor] = useState(scheduleData.globalSettings.nightShiftColor)
   const [offColor, setOffColor] = useState(scheduleData.globalSettings.offShiftColor)
@@ -43,6 +53,8 @@ export default function BurgerMenu({
   const [darkMode, setDarkMode] = useState(false)
   const [openClearDialog, setOpenClearDialog] = useState(false)
   const [localScheduleType, setLocalScheduleType] = useState(currentScheduleType)
+  const [openVacationDialog, setOpenVacationDialog] = useState(false)
+
 
   const colorPresets = {
     day: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
@@ -64,7 +76,7 @@ export default function BurgerMenu({
     if (currentScheduleType === "5days") {
       setWorkColor(dayColor)
     }
-  }, [currentScheduleType])
+  }, [currentScheduleType, dayColor]) // Added dayColor dependency
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -262,9 +274,19 @@ export default function BurgerMenu({
                   </ListItemButton>
                 </ListItem>
 
+                {/* Vacation Section */}
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => setOpenVacationDialog(true)}>
+                    <ListItemIcon>
+                      <BeachAccessIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText primary="Отпуск" secondary="Добавить отпуск" />
+                  </ListItemButton>
+                </ListItem>
+
                 {/* Theme Toggle */}
                 <ListItem disablePadding>
-                  <ListItemButton onClick={() => setActiveSection("visibility")}>
+                  <ListItemButton>
                     <ListItemIcon>
                       {darkMode ? <DarkModeIcon color="action" /> : <LightModeIcon color="action" />}
                     </ListItemIcon>
@@ -582,6 +604,25 @@ export default function BurgerMenu({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Vacation Dialog - Fixed syntax */}
+      <VacationDialog
+  open={openVacationDialog}
+  onClose={() => setOpenVacationDialog(false)}
+  onSave={(startDate, days) => {
+    if (onVacationSave) {
+      onVacationSave({ startDate, days })
+    }
+  }}
+  onDelete={(index) => {
+    if (onVacationDelete) {
+      onVacationDelete(index)
+    }
+  }}
+  vacations={vacations}
+/>
+
+
     </ThemeProvider>
   )
 }

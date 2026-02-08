@@ -35,6 +35,7 @@ export interface ScheduleData {
   monthlySettings: Map<string, MonthlySettings>
   globalSettings: GlobalSettings
   globalNotes?: string
+  vacations?: { startDate: Date; days: number }[]
 }
 
 export interface Holiday {

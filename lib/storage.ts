@@ -9,6 +9,10 @@ export function saveScheduleData(data: ScheduleData): void {
     monthlySettings: Array.from(data.monthlySettings.entries()),
     globalSettings: data.globalSettings,
     globalNotes: data.globalNotes,
+    vacations: data.vacations?.map(v => ({
+      startDate: v.startDate.toISOString(),
+      days: v.days,
+    })) ?? [],
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
 }
@@ -40,6 +44,12 @@ export function loadScheduleData(): ScheduleData | null {
       monthlySettings: new Map(parsed.monthlySettings),
       globalSettings: parsed.globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" },
       globalNotes: parsed.globalNotes || "",
+      vacations: Array.isArray(parsed.vacations)
+    ? parsed.vacations.map((v: any) => ({
+        startDate: new Date(v.startDate),
+        days: v.days,
+      }))
+    : [],
     }
   } catch {
     return null

@@ -21,6 +21,7 @@ interface ShiftCalendarProps {
   onCurrentMonthChange?: (month: string) => void
   scheduleType?: "2x2" | "5days"
   schedule5DayType?: "8hours" | "8-15"
+  onVacationSave?: (vacationDates: Date[]) => void
 }
 
 export function ShiftCalendar({
@@ -35,12 +36,14 @@ export function ShiftCalendar({
   selectedTeam,
   onCurrentMonthChange,
   scheduleType = "2x2",
-  schedule5DayType = "8hours"
+  schedule5DayType = "8hours",
+  onVacationSave
 }: ShiftCalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const generatedMonthsRef = useRef<Set<string>>(new Set())
+  const [vacationDates, setVacationDates] = useState<Date[]>([])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -136,6 +139,24 @@ export function ShiftCalendar({
     onGenerateSchedule(newShifts, startDate)
 
   }, [year, month, monthKey, daysInMonth, shifts, selectedTeam, onGenerateSchedule, currentDate, scheduleType, schedule5DayType, globalSettings])
+
+  useEffect(() => {
+    if (vacationDates.length > 0 && onVacationSave) {
+      const updatedShifts = new Map(shifts)
+      vacationDates.forEach(date => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+        updatedShifts.set(dateStr, {
+          date: dateStr,
+          type: "off",
+          hours: 0,
+          minutes: 0,
+          notes: "Отпуск"
+        })
+      })
+      onGenerateSchedule(updatedShifts, new Date(year, month, 1))
+      setVacationDates([])
+    }
+  }, [vacationDates, onVacationSave, shifts, year, month, onGenerateSchedule])
 
   const previousMonth = () => {
     const newMonth = currentDate.getMonth() - 1
