@@ -45,12 +45,15 @@ export function MonthlySettingsModal({ month, settings, onSave, onClose, workDay
             <label className="block text-sm font-medium text-foreground mb-2">Норма рабочих часов {month}</label>
             <div className="space-y-2">
               <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={targetHours}
-                  onChange={(e) => setTargetHours(Number(e.target.value))}
-                  className="flex-1 px-3 py-2 bg-input border border-border rounded-md text-foreground"
-                />
+                 <input
+                   type="number"
+                   value={targetHours === 0 ? '' : targetHours}
+                   onChange={(e) => {
+                     const value = e.target.value.replace(/^0+/, '');
+                     setTargetHours(value === '' ? 0 : Number(value));
+                   }}
+                   className="flex-1 px-3 py-2 bg-input border border-border rounded-md text-foreground"
+                 />
                 <Button
                   variant="outline"
                   size="sm"
