@@ -17,7 +17,6 @@ import { loadScheduleData, saveScheduleData } from "@/lib/storage"
 import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon } from "@mui/icons-material"
-import { calculateVacationDays } from "@/lib/vacation-utils"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 
 
@@ -222,16 +221,36 @@ export default function Dashboard() {
       globalSettings: settings,
     })
   }
-  
+
   const handleVacationDelete = (index: number) => {
   setScheduleData(prev => {
     if (!prev || !prev.vacations) return prev
 
-    const updatedVacations = prev.vacations.filter((_, i) => i !== index)
+    const vacationToDelete = prev.vacations[index]
+    if (!vacationToDelete) return prev
+
+    const updatedShifts = new Map(prev.shifts)
+
+    const vacationDates = calculateVacationDaysWithHolidays(
+      vacationToDelete.startDate,
+      vacationToDelete.days
+    )
+
+    vacationDates.forEach(date => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+
+      const shift = updatedShifts.get(dateStr)
+
+      // ⬇️ Удаляем ТОЛЬКО отпускные off
+      if (shift?.type === "off") {
+        updatedShifts.delete(dateStr)
+      }
+    })
 
     return {
       ...prev,
-      vacations: updatedVacations,
+      shifts: updatedShifts,
+      vacations: prev.vacations.filter((_, i) => i !== index),
     }
   })
 }
