@@ -283,7 +283,7 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
             <span className="text-foreground text-center flex-1 border-r border-border pr-2">{targetHours}ч</span>
             <span className={`font-medium text-center flex-1 pl-2 ${difference > 0 ? "text-yellow-500" : "text-green-500"}`}>
               {difference > 0 ?
-                `${formatDecimalHours(difference)}` :
+                `-${formatDecimalHours(difference)}` :
                 `+${formatDecimalHours(Math.abs(difference))}`}
             </span>
           </div>
