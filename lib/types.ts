@@ -45,6 +45,7 @@ export interface Holiday {
   type: "national" | "regional" | "religious" | "custom"
   region?: string // Optional region code or name
   isRecurring: boolean
+  isWorkHoliday?: boolean // Флаг для рабочих праздников
   description?: string
 }
 

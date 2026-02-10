@@ -24,14 +24,15 @@ export function calculateVacationDaysWithHolidays(
       holidaysCache[year] = generateHolidaysForYear(year)
     }
 
-    const isHoliday = holidaysCache[year].some(h => {
-      const holidayDate = new Date(h.date)
-      return (
-        holidayDate.getFullYear() === currentDate.getFullYear() &&
-        holidayDate.getMonth() === currentDate.getMonth() &&
-        holidayDate.getDate() === currentDate.getDate()
-      )
-    })
+     const isHoliday = holidaysCache[year].some(h => {
+       const holidayDate = new Date(h.date)
+       return (
+         holidayDate.getFullYear() === currentDate.getFullYear() &&
+         holidayDate.getMonth() === currentDate.getMonth() &&
+         holidayDate.getDate() === currentDate.getDate() &&
+         !h.isWorkHoliday // Исключаем рабочие праздники
+       )
+     })
 
     // ⬇️ ВСЕ дни в промежутке отпуска — off
     result.push(new Date(currentDate))

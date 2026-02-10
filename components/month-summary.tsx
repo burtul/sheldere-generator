@@ -53,8 +53,14 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
 
   const processedMonthsRef = useRef<Set<string>>(new Set())
 
-  const holidaySet = useMemo(() => {
-    return new Set(exampleHolidays.map(h => h.date));
+  const { holidaySet, workHolidaySet } = useMemo(() => {
+    const allHolidays = new Set(exampleHolidays.map(h => h.date));
+    const workHolidays = new Set(
+      exampleHolidays
+        .filter(h => h.isWorkHoliday)
+        .map(h => h.date)
+    );
+    return { holidaySet: allHolidays, workHolidaySet: workHolidays };
   }, []);
 
   // цвет праздничных дней
@@ -154,16 +160,17 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
             totalWorkedMinutes1To15 += shiftMinutes;
           }
 
-          // ✅ Проверка на праздничный день
-          const isHoliday = holidaySet.has(dateKey);
+           // ✅ Проверка на праздничный день
+           const isHoliday = holidaySet.has(dateKey);
+           const isWorkHoliday = workHolidaySet.has(dateKey);
 
-          if (isHoliday) {
-            totalHolidayMinutes += shiftMinutes;
+           if (isHoliday && !isWorkHoliday) {
+             totalHolidayMinutes += shiftMinutes;
 
-            if (shiftDay <= 15) {
-              totalHolidayMinutes1To15 += shiftMinutes;
-            }
-          }
+             if (shiftDay <= 15) {
+               totalHolidayMinutes1To15 += shiftMinutes;
+             }
+           }
         }
       });
 

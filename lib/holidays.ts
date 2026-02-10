@@ -14,6 +14,7 @@ interface DynamicHoliday {
   name: string;
   type: "national" | "regional" | "religious" | "custom";
   isRecurring: boolean;
+  isWorkHoliday?: boolean;
   description?: string;
   calculateDate: (year: number) => { month: number; day: number };
 }
@@ -163,10 +164,11 @@ const dynamicHolidays: DynamicHoliday[] = [
       };
     }
   },
-  {
+   {
     name: "Дзень работнікаў нафтавой, газавай і паліўнай прамысловасці",
     type: "regional",
     isRecurring: true,
+    isWorkHoliday: true, // Это рабочий праздник
     description: "Прафесійнае свята работнікаў нафтавой, газавай і паліўнай прамысловасці Беларусі",
     calculateDate: (year: number) => {
       // Празднуется в первое воскресенье сентября
@@ -207,20 +209,21 @@ export const generateHolidaysForYear = (year: number): Holiday[] => {
     }))
   );
 
-  // Добавляем динамические праздники
-  holidays.push(
-    ...dynamicHolidays.map((holiday) => {
-      const { month, day } = holiday.calculateDate(year);
-      return {
-        id: `${normalizeId(holiday.name)}-${year}-${month}-${day}`,
-        name: holiday.name,
-        date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-        type: holiday.type,
-        isRecurring: holiday.isRecurring,
-        description: holiday.description
-      };
-    })
-  );
+   // Добавляем динамические праздники
+   holidays.push(
+     ...dynamicHolidays.map((holiday) => {
+       const { month, day } = holiday.calculateDate(year);
+       return {
+         id: `${normalizeId(holiday.name)}-${year}-${month}-${day}`,
+         name: holiday.name,
+         date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+         type: holiday.type,
+         isRecurring: holiday.isRecurring,
+         isWorkHoliday: holiday.isWorkHoliday,
+         description: holiday.description
+       };
+     })
+   );
 
   return holidays;
 };
