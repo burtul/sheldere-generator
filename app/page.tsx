@@ -18,6 +18,7 @@ import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon } from "@mui/icons-material"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
+import { checkNotifications, scheduleNotification } from "@/lib/notification-utils"
 
 
 export default function Dashboard() {
@@ -97,6 +98,31 @@ export default function Dashboard() {
       })
     }
   }, [])
+
+  // Эффект для проверки уведомлений каждую минуту
+  useEffect(() => {
+    const checkAndScheduleNotifications = () => {
+      if (!scheduleData) return;
+
+      const now = new Date();
+      const notificationsToShow = checkNotifications(scheduleData.shifts, now);
+
+      notificationsToShow.forEach(notification => {
+        scheduleNotification(`Уведомление на ${notification.time}`, {
+          body: notification.message || 'У вас есть напоминание!',
+        });
+      });
+    };
+
+    // Проверяем уведомления сразу
+    checkAndScheduleNotifications();
+
+    // Устанавливаем интервал для проверки каждую минуту
+    const intervalId = setInterval(checkAndScheduleNotifications, 60000);
+
+    // Очищаем интервал при размонтировании компонента
+    return () => clearInterval(intervalId);
+  }, [scheduleData]);
 
   useEffect(() => {
     if (scheduleData) {
@@ -657,6 +683,8 @@ export default function Dashboard() {
                 onNoteUpdate={handleNoteUpdate}
                 onNotificationDelete={handleNotificationDelete}
                 onNoteDelete={handleNoteDelete}
+                scheduleData={scheduleData}
+                setScheduleData={setScheduleData}
               />
             )}
 

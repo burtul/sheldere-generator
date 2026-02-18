@@ -1,32 +1,40 @@
  "use client"
 
  import { useState, useEffect, useRef } from "react"
- import { Button } from "@/components/ui/button"
- import { Textarea } from "@/components/ui/textarea"
- import type { Shift } from "@/lib/types"
- import { Bell, Trash2, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AddNotificationDialog } from "./add-notification-dialog"
+import type { Shift } from "@/lib/types"
+import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
 
  interface ShiftDetailsPanelProps {
-   shift: Shift | null
-   date: string | null
-   formattedDate: string | null
-   onEdit: () => void
-   onDelete: () => void
-   onNoteUpdate: (date: string, note: string) => void
-   onNotificationDelete: (date: string, notificationId: string) => void
-   onNoteDelete: (date: string) => void
- }
+  shift: Shift | null
+  date: string | null
+  formattedDate: string | null
+  onEdit: () => void
+  onDelete: () => void
+  onNoteUpdate: (date: string, note: string) => void
+  onNotificationDelete: (date: string, notificationId: string) => void
+  onNoteDelete: (date: string) => void
+  scheduleData: any
+  setScheduleData: (data: any) => void
+}
 
  export function ShiftDetailsPanel({
-   shift,
-   date,
-   formattedDate,
-   onEdit,
-   onDelete,
-   onNoteUpdate,
-   onNotificationDelete,
-   onNoteDelete
- }: ShiftDetailsPanelProps) {
+  shift,
+  date,
+  formattedDate,
+  onEdit,
+  onDelete,
+  onNoteUpdate,
+  onNotificationDelete,
+  onNoteDelete,
+  scheduleData,
+  setScheduleData
+}: ShiftDetailsPanelProps) {
    const [isEditingNote, setIsEditingNote] = useState(false)
    const [currentNote, setCurrentNote] = useState("")
    const [showDeleteAlert, setShowDeleteAlert] = useState(false)
@@ -86,10 +94,37 @@
      setIsEditingNote(false)
    }
 
-   const handleNoteCancel = () => {
-     setCurrentNote(shift?.notes || "")
-     setIsEditingNote(false)
-   }
+    const handleNoteCancel = () => {
+      setCurrentNote(shift?.notes || "")
+      setIsEditingNote(false)
+    }
+
+    // Обработка добавления нового уведомления
+    const handleAddNotification = (time: string, message: string) => {
+      if (!date || !scheduleData || !setScheduleData) return;
+
+      const newNotification = {
+        id: Date.now().toString(),
+        time,
+        message,
+      };
+
+      const newShifts = new Map(scheduleData.shifts);
+      const shift = newShifts.get(date);
+
+      if (shift) {
+        const updatedNotifications = (shift as any).notifications ? [...(shift as any).notifications, newNotification] : [newNotification];
+        newShifts.set(date, {
+          ...shift,
+          notifications: updatedNotifications,
+        });
+
+        setScheduleData({
+          ...scheduleData,
+          shifts: newShifts,
+        });
+      }
+    };
 
    const handleKeyDown = (e: React.KeyboardEvent) => {
      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -168,38 +203,49 @@
              </div>
            </div>
 
-           {/* Блок уведомлений */}
-           {shift.notifications && shift.notifications.length > 0 && (
-             <div className="bg-muted/50 rounded-lg p-3">
-               <div className="flex justify-between items-center text-base mb-1">
-                 <span className="text-muted-foreground">Уведомления</span>
-               </div>
-               <div className="mt-2 space-y-2">
-                 {shift.notifications.map((notification) => (
-                   <div
-                     key={notification.id}
-                     className="flex items-start justify-between gap-2 bg-muted rounded-md p-2 text-sm"
-                   >
-                     <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2">
-                         <Bell className="h-3 w-3 text-accent flex-shrink-0" />
-                         <span className="text-xs font-medium text-accent">{notification.time}</span>
-                       </div>
-                       {notification.message && (
-                         <div className="text-xs text-muted-foreground break-words mt-1">{notification.message}</div>
-                       )}
-                     </div>
-                     <button
-                       onClick={() => handleRemoveNotification(notification.id)}
-                       className="flex-shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
-                     >
-                       <Trash2 className="h-3 w-3" />
-                     </button>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
+            {/* Блок уведомлений */}
+            {(shift as any).notifications && (shift as any).notifications.length > 0 && (
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="flex justify-between items-center text-base mb-1">
+                  <span className="text-muted-foreground">Уведомления</span>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {(shift as any).notifications.map((notification: any) => (
+                    <div
+                      key={notification.id}
+                      className="flex items-start justify-between gap-2 bg-muted rounded-md p-2 text-sm"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-3 w-3 text-accent flex-shrink-0" />
+                          <span className="text-xs font-medium text-accent">{notification.time}</span>
+                        </div>
+                        {notification.message && (
+                          <div className="text-xs text-muted-foreground break-words mt-1">{notification.message}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleRemoveNotification(notification.id)}
+                        className="flex-shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Кнопка для добавления нового уведомления */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full">
+                  <Plus className="h-3.5 w-3.5 mr-2" />
+                  Добавить уведомление
+                </Button>
+              </DialogTrigger>
+              <AddNotificationDialog onAddNotification={handleAddNotification} />
+            </Dialog>
 
            {/* Блок заметки с возможностью редактирования по клику */}
            <div className="bg-muted/50 rounded-lg p-3">
