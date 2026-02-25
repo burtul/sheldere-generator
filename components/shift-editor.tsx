@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import type { Shift, ShiftType } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
+import { AddNotificationDialog } from './add-notification-dialog';
+import { Bell, Trash2, Plus } from 'lucide-react';
 
 interface ShiftEditorProps {
   date: string;
@@ -9,6 +16,8 @@ interface ShiftEditorProps {
   formattedDate: string;
   scheduleType?: '2x2' | '5days';
   schedule5DayType?: '8hours' | '8-15';
+  scheduleData: any;
+  setScheduleData: (data: any) => void;
 }
 
 // Функция для получения доступных типов смен в зависимости от графика
@@ -26,7 +35,17 @@ function getAvailableShiftTypes(scheduleType?: '2x2' | '5days', schedule5DayType
   }
 }
 
-export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, scheduleType = '2x2', schedule5DayType = '8hours' }: ShiftEditorProps) {
+export function ShiftEditor({
+  date,
+  shift,
+  onSave,
+  onClose,
+  formattedDate,
+  scheduleType = '2x2',
+  schedule5DayType = '8hours',
+  scheduleData,
+  setScheduleData,
+}: ShiftEditorProps) {
   const [shiftData, setShiftData] = React.useState<Shift>(() =>
     shift || {
       date,
@@ -37,6 +56,25 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, sched
       notifications: [],
     }
   );
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [currentNote, setCurrentNote] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Инициализация заметки при изменении смены
+  React.useEffect(() => {
+    setCurrentNote(shift?.notes || '');
+    setIsEditingNote(false);
+  }, [shift]);
+
+  // Автоматически фокусироваться на textarea при начале редактирования
+  React.useEffect(() => {
+    if (isEditingNote && textareaRef.current) {
+      textareaRef.current.focus();
+      // Поместить курсор в конец текста
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+    }
+  }, [isEditingNote]);
 
   // Получаем доступные типы смен для текущего графика
   const availableShiftTypes = getAvailableShiftTypes(scheduleType, scheduleType === '5days' ? schedule5DayType : undefined);
@@ -95,7 +133,13 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, sched
   };
 
   const handleSave = () => {
-    onSave(shiftData);
+    // Проверяем, что уведомления из shiftData передаются в глобальное состояние
+    const updatedShift = {
+      ...shiftData,
+      notifications: shiftData.notifications || [],
+    };
+    
+    onSave(updatedShift);
     onClose();
   };
 
@@ -105,21 +149,91 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, sched
       case 'day':
         return 'Дневная';
       case 'night':
-        return 'Ночная 1';
+        return 'Ночная1';
       case 'night2':
-        return 'Ночная 2';
+        return 'Ночная2';
       case 'off':
         return 'Выходной';
       case 'offn':
         return 'Отсыпной';
       case 'weekday':
-        return 'Рабочий день';
+        return 'Рабочий8';
       case 'weekday15':
-        return 'Рабочий день (8ч 15м)';
+        return 'Рабочий8-15';
       case 'weekday7':
-        return 'Рабочий день (7ч)';
+        return 'Рабочий7';
       default:
         return type;
+    }
+  };
+
+  // Обработка добавления нового уведомления
+  const handleAddNotification = (time: string, message: string) => {
+    if (!date) return;
+    
+    // Валидация данных
+    if (!time) {
+      alert('Пожалуйста, укажите время для уведомления');
+      return;
+    }
+    
+    if (!message.trim()) {
+      alert('Пожалуйста, добавьте текст сообщения');
+      return;
+    }
+    
+    // Проверка формата времени (HH:mm)
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(time)) {
+      alert('Некорректный формат времени. Используйте формат ЧЧ:ММ');
+      return;
+    }
+
+    const newNotification = {
+      id: Date.now().toString(),
+      time,
+      message: message.trim(),
+    };
+
+    // Обновляем локальное состояние смены
+    setShiftData(prev => ({
+      ...prev,
+      notifications: [...(prev.notifications || []), newNotification],
+    }));
+  };
+
+  // Удаление уведомления
+  const handleRemoveNotification = (id: string) => {
+    if (!date) return;
+
+    // Обновляем локальное состояние смены
+    setShiftData(prev => ({
+      ...prev,
+      notifications: (prev.notifications || []).filter(n => n.id !== id),
+    }));
+  };
+
+  const handleNoteClick = () => {
+    setIsEditingNote(true);
+  };
+
+  const handleNoteSave = () => {
+    if (currentNote.trim() !== (shift?.notes || '')) {
+      setShiftData((prev) => ({ ...prev, notes: currentNote.trim() }));
+    }
+    setIsEditingNote(false);
+  };
+
+  const handleNoteCancel = () => {
+    setCurrentNote(shift?.notes || '');
+    setIsEditingNote(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      handleNoteSave();
+    } else if (e.key === 'Escape') {
+      handleNoteCancel();
     }
   };
 
@@ -193,17 +307,83 @@ export function ShiftEditor({ date, shift, onSave, onClose, formattedDate, sched
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Заметки
-            </label>
-            <input
-              type="text"
-              name="notes"
-              value={shiftData.notes}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground"
-            />
+          {/* Блок уведомлений */}
+          {shiftData.notifications && shiftData.notifications.length > 0 && (
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex justify-between items-center text-base mb-1">
+                <span className="text-muted-foreground">Уведомления</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {shiftData.notifications.map((notification: any) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start justify-between gap-2 bg-muted rounded-md p-2 text-sm"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Bell className="h-3 w-3 text-accent flex-shrink-0" />
+                        <span className="text-xs font-medium text-accent">{notification.time}</span>
+                      </div>
+                      {notification.message && (
+                        <div className="text-xs text-muted-foreground break-words mt-1">{notification.message}</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveNotification(notification.id)}
+                      className="flex-shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Кнопка для добавления нового уведомления */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full">
+                <Plus className="h-3.5 w-3.5 mr-2" />
+                Добавить уведомление
+              </Button>
+            </DialogTrigger>
+            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+              <DialogTitle>Добавить уведомление</DialogTitle>
+              <AddNotificationDialog onAddNotification={handleAddNotification} />
+            </DialogContent>
+          </Dialog>
+
+          {/* Блок заметки с возможностью редактирования */}
+          <div className="bg-muted/50 rounded-lg p-3">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-foreground">Запись</span>
+            </div>
+            {isEditingNote ? (
+              <div className="mt-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={currentNote}
+                  onChange={(e) => setCurrentNote(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleNoteSave}
+                  placeholder="Добавьте запись к дню..."
+                  className="min-h-[100px] resize-none"
+                />
+              </div>
+            ) : (
+              <div onClick={handleNoteClick} className="mt-1 cursor-pointer">
+                {shiftData.notes ? (
+                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-3 whitespace-pre-wrap">
+                    {shiftData.notes}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic bg-muted/30 rounded-md p-3 border border-dashed border-border">
+                    Кликните, чтобы добавить запись...
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

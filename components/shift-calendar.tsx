@@ -232,8 +232,9 @@ export function ShiftCalendar({
     }
   }
 
-  const hasNotifications = (shift: Shift | null) =>
-    !!shift?.notifications && shift.notifications.length > 0
+  const hasNotifications = (shift: Shift | null) => {
+    return !!shift?.notifications && shift.notifications.length > 0;
+  }
 
   const weekDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
   const monthNames = [

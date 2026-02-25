@@ -280,10 +280,6 @@ import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
                    placeholder="Добавьте запись к дню..."
                    className="min-h-[100px] resize-none"
                  />
-                 <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                   <span>Нажмите Ctrl+Enter для сохранения</span>
-                   <span>Escape для отмены</span>
-                 </div>
                </div>
              ) : (
                <div

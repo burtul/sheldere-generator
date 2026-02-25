@@ -14,6 +14,7 @@ interface AddNotificationDialogProps {
 export function AddNotificationDialog({ onAddNotification }: AddNotificationDialogProps) {
   const [time, setTime] = useState("")
   const [message, setMessage] = useState("")
+  const [open, setOpen] = useState(true)
 
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [permissionDenied, setPermissionDenied] = useState(false)
@@ -68,6 +69,7 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
       // Планируем локальное уведомление
       const notificationTime = new Date()
       const [hours, minutes] = time.split(':').map(Number)
+
       notificationTime.setHours(hours, minutes, 0)
 
       await LocalNotifications.schedule({
@@ -85,10 +87,10 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
       })
 
       onAddNotification(time, message)
-      alert("Уведомление запланировано")
+      setOpen(false)
     } catch (error) {
       console.error('Error scheduling notification:', error)
-      alert("Ошибка при планировании уведомления")
+      alert("Ошибка при добавлении уведомления")
     }
   }
 
