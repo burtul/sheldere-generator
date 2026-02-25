@@ -1,4 +1,13 @@
 import type { Shift, ShiftType } from "./types"
+import { generateHolidaysForYear } from "./holidays"
+
+// Функция для проверки, является ли день праздничным
+function isHoliday(date: Date): boolean {
+  const year = date.getFullYear()
+  const holidays = generateHolidaysForYear(year)
+  const dateStr = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+  return holidays.some(holiday => holiday.date === dateStr && !holiday.isWorkHoliday)
+}
 
 export const SHIFT_PATTERN = ["day", "day", "off", "off", "night", "night2", "offn", "off"] as const
 
@@ -199,8 +208,11 @@ export function generate5DaySchedule(
 
     // 0 - Воскресенье, 1 - Понедельник, ..., 6 - Суббота
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      shiftType = "weekday"
-      hours = 8
+      // Проверяем, является ли день праздничным
+      if (!isHoliday(currentDate)) {
+        shiftType = "weekday"
+        hours = 8
+      }
     }
 
     shifts.set(dateKey, {
@@ -241,16 +253,21 @@ export function generate5DaySchedule15(
     let minutes = 0
 
     // 0 - Воскресенье, 1 - Понедельник, ..., 6 - Суббота
-    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      // Понедельник - Четверг: 8 часов 15 минут
-      shiftType = "weekday15"
-      hours = 8
-      minutes = 15
-    } else if (dayOfWeek === 5) {
-      // Пятница: 7 часов
-      shiftType = "weekday7"
-      hours = 7
-      minutes = 0
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      // Проверяем, является ли день праздничным
+      if (!isHoliday(currentDate)) {
+        if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+          // Понедельник - Четверг: 8 часов 15 минут
+          shiftType = "weekday15"
+          hours = 8
+          minutes = 15
+        } else if (dayOfWeek === 5) {
+          // Пятница: 7 часов
+          shiftType = "weekday7"
+          hours = 7
+          minutes = 0
+        }
+      }
     }
 
     shifts.set(dateKey, {
