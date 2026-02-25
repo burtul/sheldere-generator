@@ -1,5 +1,5 @@
 ext {
-    minSdkVersion = 22
+    minSdkVersion = 23  // Требуется для Capacitor Local/Push Notifications (Android 6.0+)
     compileSdkVersion = 33
     targetSdkVersion = 33
     androidxActivityVersion = '1.7.0'
@@ -13,4 +13,8 @@ ext {
     androidxJunitVersion = '1.1.5'
     androidxEspressoCoreVersion = '3.5.1'
     cordovaAndroidVersion = '10.1.1'
+    
+    // Fix for Java 21 compatibility
+    javaVersion = JavaVersion.VERSION_17
+    jvmTarget = "17"
 }
