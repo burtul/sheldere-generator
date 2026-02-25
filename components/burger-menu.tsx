@@ -340,11 +340,11 @@ export default function BurgerMenu({
                     <FormControlLabel
                       value="2x2"
                       control={<Radio />}
-                      label="2 через 2 (бригады)"
+                      label="2 через 2 (12ч)"
                       sx={{ mb: 1 }}
                     />
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
-                      2 дневные → 2 выходных → 2 ночные → Отсыпной → Выходной
+                      2 дн → 2 вых → 2 ноч → отс → вых
                     </Typography>
 
                     <FormControlLabel
@@ -354,7 +354,7 @@ export default function BurgerMenu({
                       sx={{ mb: 1 }}
                     />
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
-                      5 рабочих дней (8h) → 2 выходных
+                      5 рабочих дней (8h/8h15) → 2 вых
                     </Typography>
                   </RadioGroup>
                 </FormControl>

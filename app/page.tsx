@@ -16,7 +16,7 @@ import { generateSchedule, getWorkDaysInMonth, generate5DaySchedule, generate5Da
 import { loadScheduleData, saveScheduleData } from "@/lib/storage"
 import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
-import { Menu as MenuIcon } from "@mui/icons-material"
+import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification } from "@/lib/notification-utils"
 
@@ -249,37 +249,37 @@ export default function Dashboard() {
   }
 
   const handleVacationDelete = (index: number) => {
-  setScheduleData(prev => {
-    if (!prev || !prev.vacations) return prev
+    setScheduleData(prev => {
+      if (!prev || !prev.vacations) return prev
 
-    const vacationToDelete = prev.vacations[index]
-    if (!vacationToDelete) return prev
+      const vacationToDelete = prev.vacations[index]
+      if (!vacationToDelete) return prev
 
-    const updatedShifts = new Map(prev.shifts)
+      const updatedShifts = new Map(prev.shifts)
 
-    const vacationDates = calculateVacationDaysWithHolidays(
-      vacationToDelete.startDate,
-      vacationToDelete.days
-    )
+      const vacationDates = calculateVacationDaysWithHolidays(
+        vacationToDelete.startDate,
+        vacationToDelete.days
+      )
 
-    vacationDates.forEach(date => {
-      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+      vacationDates.forEach(date => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 
-      const shift = updatedShifts.get(dateStr)
+        const shift = updatedShifts.get(dateStr)
 
-      // ⬇️ Удаляем ТОЛЬКО отпускные off
-      if (shift?.type === "off") {
-        updatedShifts.delete(dateStr)
+        // ⬇️ Удаляем ТОЛЬКО отпускные off
+        if (shift?.type === "off") {
+          updatedShifts.delete(dateStr)
+        }
+      })
+
+      return {
+        ...prev,
+        shifts: updatedShifts,
+        vacations: prev.vacations.filter((_, i) => i !== index),
       }
     })
-
-    return {
-      ...prev,
-      shifts: updatedShifts,
-      vacations: prev.vacations.filter((_, i) => i !== index),
-    }
-  })
-}
+  }
 
 
   const handleDateClick = (dateStr: string) => {
@@ -620,8 +620,14 @@ export default function Dashboard() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-foreground">{"График смен эдишон"}</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">2/2 график смен </p>
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground">{"График смен"}</h1>
+
+                {/* Вот этот блок теперь будет в одной строке */}
+                <div className="flex items-center gap-1"> {/* Добавил gap для отступа */}
+                  <Telegram className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">@tan4ik_2</p>
+                </div>
+
               </div>
             </div>
             <div>
