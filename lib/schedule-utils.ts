@@ -9,6 +9,13 @@ function isHoliday(date: Date): boolean {
   return holidays.some(holiday => holiday.date === dateStr && !holiday.isWorkHoliday)
 }
 
+// Проверка, является ли день рабочим днём перед праздничным днём
+function isWorkDayBeforeHoliday(date: Date): boolean {
+  const nextDay = new Date(date)
+  nextDay.setDate(date.getDate() + 1)
+  return isHoliday(nextDay) && date.getDay() >= 1 && date.getDay() <= 5
+}
+
 export const SHIFT_PATTERN = ["day", "day", "off", "off", "night", "night2", "offn", "off"] as const
 
 const TEAM_PATTERNS = {
@@ -206,14 +213,18 @@ export function generate5DaySchedule(
     let shiftType: ShiftType = "off"
     let hours = 0
 
-    // 0 - Воскресенье, 1 - Понедельник, ..., 6 - Суббота
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      // Проверяем, является ли день праздничным
-      if (!isHoliday(currentDate)) {
-        shiftType = "weekday"
-        hours = 8
+      // 0 - Воскресенье, 1 - Понедельник, ..., 6 - Суббота
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Проверяем, является ли день праздничным
+        if (!isHoliday(currentDate)) {
+          shiftType = "weekday"
+          hours = 8
+          // Уменьшаем рабочее время на 1 час, если это рабочий день перед праздничным днём
+          if (isWorkDayBeforeHoliday(currentDate)) {
+            hours -= 1
+          }
+        }
       }
-    }
 
     shifts.set(dateKey, {
       date: dateKey,
@@ -261,11 +272,19 @@ export function generate5DaySchedule15(
           shiftType = "weekday15"
           hours = 8
           minutes = 15
+          // Уменьшаем рабочее время на 1 час, если это рабочий день перед праздничным днём
+          if (isWorkDayBeforeHoliday(currentDate)) {
+            hours -= 1
+          }
         } else if (dayOfWeek === 5) {
           // Пятница: 7 часов
           shiftType = "weekday7"
           hours = 7
           minutes = 0
+          // Уменьшаем рабочее время на 1 час, если это рабочий день перед праздничным днём
+          if (isWorkDayBeforeHoliday(currentDate)) {
+            hours -= 1
+          }
         }
       }
     }
