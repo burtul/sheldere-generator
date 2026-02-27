@@ -784,15 +784,17 @@ export default function Dashboard() {
       )}
 
       {editingDate && (
-        <ShiftEditor
-          date={editingDate}
-          shift={getEditingShift()}
-          onSave={handleSaveShift}
-          onClose={() => setEditingDate(null)}
-          formattedDate={formatDateString(editingDate) || ''}
-          scheduleType={scheduleType}
-          schedule5DayType={schedule5DayType}
-        />
+      <ShiftEditor
+        date={editingDate}
+        shift={getEditingShift()}
+        onSave={handleSaveShift}
+        onClose={() => setEditingDate(null)}
+        formattedDate={formatDateString(editingDate) || ''}
+        scheduleType={scheduleType}
+        schedule5DayType={schedule5DayType}
+        scheduleData={scheduleData}
+        setScheduleData={setScheduleData}
+      />
       )}
 
       {editingGlobalNotes && (

@@ -138,7 +138,17 @@ export function ShiftEditor({
       ...shiftData,
       notifications: shiftData.notifications || [],
     };
-    
+
+    // Обновляем глобальное состояние, если переданы scheduleData и setScheduleData
+    if (scheduleData && setScheduleData && date) {
+      const newShifts = new Map(scheduleData.shifts);
+      newShifts.set(date, updatedShift);
+      setScheduleData({
+        ...scheduleData,
+        shifts: newShifts,
+      });
+    }
+
     onSave(updatedShift);
     onClose();
   };
@@ -169,19 +179,19 @@ export function ShiftEditor({
 
   // Обработка добавления нового уведомления
   const handleAddNotification = (time: string, message: string) => {
-    if (!date) return;
-    
+    if (!date || !scheduleData || !setScheduleData) return;
+
     // Валидация данных
     if (!time) {
       alert('Пожалуйста, укажите время для уведомления');
       return;
     }
-    
+
     if (!message.trim()) {
       alert('Пожалуйста, добавьте текст сообщения');
       return;
     }
-    
+
     // Проверка формата времени (HH:mm)
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(time)) {
@@ -200,17 +210,47 @@ export function ShiftEditor({
       ...prev,
       notifications: [...(prev.notifications || []), newNotification],
     }));
+
+    // Обновляем глобальное состояние
+    const newShifts = new Map(scheduleData.shifts);
+    const currentShift = newShifts.get(date);
+    if (currentShift) {
+      const updatedNotifications = (currentShift as any).notifications ? [...(currentShift as any).notifications, newNotification] : [newNotification];
+      newShifts.set(date, {
+        ...currentShift,
+        notifications: updatedNotifications,
+      });
+      setScheduleData({
+        ...scheduleData,
+        shifts: newShifts,
+      });
+    }
   };
 
   // Удаление уведомления
   const handleRemoveNotification = (id: string) => {
-    if (!date) return;
+    if (!date || !scheduleData || !setScheduleData) return;
 
     // Обновляем локальное состояние смены
     setShiftData(prev => ({
       ...prev,
       notifications: (prev.notifications || []).filter(n => n.id !== id),
     }));
+
+    // Обновляем глобальное состояние
+    const newShifts = new Map(scheduleData.shifts);
+    const currentShift = newShifts.get(date);
+    if (currentShift) {
+      const updatedNotifications = (currentShift as any).notifications ? (currentShift as any).notifications.filter((n: any) => n.id !== id) : [];
+      newShifts.set(date, {
+        ...currentShift,
+        notifications: updatedNotifications,
+      });
+      setScheduleData({
+        ...scheduleData,
+        shifts: newShifts,
+      });
+    }
   };
 
   const handleNoteClick = () => {
