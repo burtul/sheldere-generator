@@ -3,7 +3,7 @@ import { generateHolidaysForYear } from "./holidays"
 import { isValidDate } from "./utils"
 
 // Функция для проверки, является ли день праздничным
-function isHoliday(date: Date): boolean {
+export function isHoliday(date: Date): boolean {
   const year = date.getFullYear()
   const holidays = generateHolidaysForYear(year)
   const dateStr = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
@@ -11,7 +11,7 @@ function isHoliday(date: Date): boolean {
 }
 
 // Проверка, является ли день рабочим днём перед праздничным днём
-function isWorkDayBeforeHoliday(date: Date): boolean {
+export function isWorkDayBeforeHoliday(date: Date): boolean {
   const nextDay = new Date(date)
   nextDay.setDate(date.getDate() + 1)
   return isHoliday(nextDay) && date.getDay() >= 1 && date.getDay() <= 5

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import type { Shift, MonthlySettings, GlobalSettings, Holiday } from "@/lib/types"
-import { getMonthHours, getWorkDaysInMonth, getMonthHoursFrom1To15, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
+import { getMonthHours, getWorkDaysInMonth, getMonthHoursFrom1To15, generateSchedule, generate5DaySchedule, generate5DaySchedule15, isHoliday, isWorkDayBeforeHoliday } from "@/lib/schedule-utils"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { exampleHolidays } from "@/lib/holidays";
 
@@ -189,9 +189,28 @@ export function MonthSummary({ shifts, monthlySettings, globalSettings, currentM
 
       const totalWorkedDecimal = totalWorkedMinutes / 60;
 
-      const workDays = getWorkDaysInMonth(year, monthNum - 1);
-      const defaultTarget = workDays * 8;
-      const target = monthlySettings.get(displayMonth)?.targetHours || defaultTarget;
+       const calculateDefaultTargetHours = () => {
+         const date = new Date(`${year}-${monthNum}-01T00:00:00`);
+         const lastDay = new Date(year, monthNum, 0);
+         let calculatedHours = 0;
+
+         for (let day = 1; day <= lastDay.getDate(); day++) {
+           const currentDate = new Date(year, monthNum - 1, day);
+           const dayOfWeek = currentDate.getDay();
+
+           if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+             if (!isHoliday(currentDate)) {
+               calculatedHours += 8;
+               if (isWorkDayBeforeHoliday(currentDate)) {
+                 calculatedHours -= 1;
+               }
+             }
+           }
+         }
+         return calculatedHours;
+       };
+
+       const target = monthlySettings.get(displayMonth)?.targetHours || calculateDefaultTargetHours();
 
       const diff = target - totalWorkedDecimal;
 

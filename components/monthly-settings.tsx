@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { MonthlySettings } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { X, RotateCcw } from "lucide-react"
+import { isWorkDayBeforeHoliday, isHoliday } from "@/lib/schedule-utils"
 
 interface MonthlySettingsProps {
   month: string
@@ -14,10 +15,35 @@ interface MonthlySettingsProps {
 }
 
 export function MonthlySettingsModal({ month, settings, onSave, onClose, workDays }: MonthlySettingsProps) {
-  const [targetHours, setTargetHours] = useState(settings.targetHours)
+  const calculateDefaultTargetHours = () => {
+    const date = new Date(`${month}-01T00:00:00`);
+    const year = date.getFullYear();
+    const monthIndex = date.getMonth();
+    const lastDay = new Date(year, monthIndex + 1, 0);
+    let calculatedHours = 0;
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const currentDate = new Date(year, monthIndex, day);
+      const dayOfWeek = currentDate.getDay();
+
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        if (!isHoliday(currentDate)) {
+          calculatedHours += 8;
+          if (isWorkDayBeforeHoliday(currentDate)) {
+            calculatedHours -= 1;
+          }
+        }
+      }
+    }
+
+    return calculatedHours;
+  };
+
+  const defaultTargetHours = calculateDefaultTargetHours();
+  const [targetHours, setTargetHours] = useState(defaultTargetHours)
 
   const handleAutoCalculate = () => {
-    setTargetHours(workDays * 8)
+    setTargetHours(calculateDefaultTargetHours())
   }
 
   const handleSave = () => {
@@ -27,8 +53,6 @@ export function MonthlySettingsModal({ month, settings, onSave, onClose, workDay
     })
     onClose()
   }
-
-  const defaultTargetHours = workDays * 8
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -58,7 +82,7 @@ export function MonthlySettingsModal({ month, settings, onSave, onClose, workDay
                   variant="outline"
                   size="sm"
                   onClick={handleAutoCalculate}
-                  title={`${workDays} work days × 8 hours = ${defaultTargetHours} hours`}
+                   title={`Авторасчёт: ${calculateDefaultTargetHours()} часов`}
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>

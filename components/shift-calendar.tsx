@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Edit2, Bell, FileText } from "lucide-react"
 import type { Shift, MonthlySettings, GlobalSettings, Holiday } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { cn, isDateStringValid } from "@/lib/utils"
+import { isWorkDayBeforeHoliday as isWorkDayBeforeHolidayUtils, isHoliday as isHolidayFromUtils } from "@/lib/schedule-utils"
 import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15, DEFAULT_PATTERN_BASE_DATE } from "@/lib/schedule-utils"
 import { exampleHolidays, generateHolidaysForYear } from "@/lib/holidays"
 
@@ -56,8 +57,31 @@ export function ShiftCalendar({
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`
   const monthSettings = monthlySettings.get(monthKey)
 
+  const calculateDefaultTargetHours = () => {
+    const date = new Date(`${year}-${String(month + 1).padStart(2, "0")}-01T00:00:00`);
+    const lastDay = new Date(year, month + 1, 0);
+    let targetHours = 0;
+
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const currentDate = new Date(year, month, day);
+      const dayOfWeek = currentDate.getDay();
+
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        if (!isHolidayFromUtils(currentDate)) {
+          targetHours += 8;
+          if (isWorkDayBeforeHolidayUtils(currentDate)) {
+            targetHours -= 1;
+          }
+        }
+      }
+    }
+
+    return targetHours;
+  };
+
   const workDays = getWorkDaysInMonth(year, month)
-  const targetHours = monthSettings?.targetHours || workDays * 8
+  const defaultTargetHours = calculateDefaultTargetHours()
+  const targetHours = monthSettings?.targetHours || defaultTargetHours
 
   const adjustedStartingDay = startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1
 
