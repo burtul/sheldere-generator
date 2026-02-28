@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { Shift, ShiftType } from '@/lib/types';
+import { saveTeamShifts, loadTeamShifts } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ interface ShiftEditorProps {
   schedule5DayType?: '8hours' | '8-15';
   scheduleData: any;
   setScheduleData: (data: any) => void;
+  currentTeamId?: string;
 }
 
 // Функция для получения доступных типов смен в зависимости от графика
@@ -45,6 +47,7 @@ export function ShiftEditor({
   schedule5DayType = '8hours',
   scheduleData,
   setScheduleData,
+  currentTeamId,
 }: ShiftEditorProps) {
   const [shiftData, setShiftData] = React.useState<Shift>(() =>
     shift || {
@@ -147,6 +150,24 @@ export function ShiftEditor({
         ...scheduleData,
         shifts: newShifts,
       });
+
+    // Сохраняем изменения Shift для текущей команды, если указан teamId
+    if (currentTeamId) {
+      try {
+        const existingTeamShifts = loadTeamShifts(currentTeamId) || new Map<string, Shift>();
+        existingTeamShifts.set(date, {
+          ...updatedShift,
+        // Сохраняем только тип смены, остальные данные берутся из основного графика
+        type: updatedShift.type,
+        hours: updatedShift.hours,
+        minutes: updatedShift.minutes,
+        });
+        saveTeamShifts(currentTeamId, existingTeamShifts);
+        console.log(`Сохранено для команды ${currentTeamId}:`, { date, shift: updatedShift });
+      } catch (error) {
+        console.error("Failed to save team shifts:", error);
+      }
+    }
     }
 
     onSave(updatedShift);

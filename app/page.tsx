@@ -13,7 +13,7 @@ import { TeamSelector } from "@/components/team-selector"
 import BurgerMenu from "@/components/burger-menu"
 import type { ScheduleData, MonthlySettings, Shift, GlobalSettings } from "@/lib/types"
 import { generateSchedule, getWorkDaysInMonth, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
-import { loadScheduleData, saveScheduleData } from "@/lib/storage"
+import { loadScheduleData, saveScheduleData, loadTeamShifts } from "@/lib/storage"
 import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
@@ -398,24 +398,71 @@ export default function Dashboard() {
   const handleTeamSelect = (team: string) => {
     setSelectedTeam(team)
     const startDate = new Date(2025, 0, 1)
-    let newShifts: Map<string, Shift>
+    // 1. Сначала загружаем текущие смены из scheduleData
+    let newShifts = new Map<string, Shift>(scheduleData.shifts);
 
+    // 2. Генерируем новый график только для дат, которых ещё нет в scheduleData
     if (scheduleType === "5days") {
       // Для 5-дневного графика определяем тип по выбранной команде
       if (team === "8 часов") {
         setSchedule5DayType("8hours")
-        newShifts = generate5DaySchedule(startDate, 7200)
+        const generatedShifts = generate5DaySchedule(startDate, 7200);
+        generatedShifts.forEach((shift, date) => {
+          if (!newShifts.has(date)) {
+            newShifts.set(date, shift);
+          }
+        });
       } else if (team === "8 часов 15 минут") {
         setSchedule5DayType("8-15")
-        newShifts = generate5DaySchedule15(startDate, 7200)
+        const generatedShifts = generate5DaySchedule15(startDate, 7200);
+        generatedShifts.forEach((shift, date) => {
+          if (!newShifts.has(date)) {
+            newShifts.set(date, shift);
+          }
+        });
       } else {
         // На случай, если выбрана бригада (не должно происходить для 5days)
-        newShifts = generateSchedule(startDate, 7200, team as any)
+        const generatedShifts = generateSchedule(startDate, 7200, team as any);
+        generatedShifts.forEach((shift, date) => {
+          if (!newShifts.has(date)) {
+            newShifts.set(date, shift);
+          }
+        });
       }
     } else {
       // Для 2x2 графика используем стандартную генерацию
-      newShifts = generateSchedule(startDate, 7200, team as any)
+      const generatedShifts = generateSchedule(startDate, 7200, team as any);
+        generatedShifts.forEach((shift, date) => {
+          if (!newShifts.has(date)) {
+            newShifts.set(date, shift);
+          } else {
+            // Если смена уже существует, объединяем данные
+            const existingShift = newShifts.get(date)!;
+            newShifts.set(date, {
+              ...shift,
+              // Сохраняем существующие notes и notifications
+              notes: existingShift.notes,
+              notifications: existingShift.notifications,
+            });
+          }
+        });
     }
+
+             // 3. Применяем teamShifts ТОЛЬКО для смен с указанным типом (shift.type)
+     const teamShifts = loadTeamShifts(team);
+     if (teamShifts) {
+       teamShifts.forEach((shift: Shift, date: string) => {
+         if (shift.type && newShifts.has(date)) {
+           const existingShift = newShifts.get(date)!;
+           newShifts.set(date, {
+             ...existingShift,       // Сохраняем все существующие данные
+             type: shift.type,        // Обновляем только тип
+             hours: shift.hours,      // Опционально: обновляем часы/минуты
+             minutes: shift.minutes
+           });
+         }
+       });
+     }
 
     // Сохраняем заметки и уведомления из текущих смен
     const preservedShifts = new Map<string, Shift>()
@@ -679,20 +726,21 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            {visibilitySettings.showShiftInfo && (
-              <ShiftDetailsPanel
-                shift={getSelectedShift()}
-                date={selectedDate}
-                formattedDate={formatDateString(selectedDate)}
-                onEdit={() => setEditingDate(selectedDate)}
-                onDelete={handleDeleteShift}
-                onNoteUpdate={handleNoteUpdate}
-                onNotificationDelete={handleNotificationDelete}
-                onNoteDelete={handleNoteDelete}
-                scheduleData={scheduleData}
-                setScheduleData={setScheduleData}
-              />
-            )}
+             {visibilitySettings.showShiftInfo && (
+               <ShiftDetailsPanel
+                 shift={getSelectedShift()}
+                 date={selectedDate}
+                 formattedDate={formatDateString(selectedDate)}
+                 onEdit={() => setEditingDate(selectedDate)}
+                 onDelete={handleDeleteShift}
+                 onNoteUpdate={handleNoteUpdate}
+                 onNotificationDelete={handleNotificationDelete}
+                 onNoteDelete={handleNoteDelete}
+                 scheduleData={scheduleData}
+                 setScheduleData={setScheduleData}
+                 currentTeamId={selectedTeam || undefined}
+               />
+             )}
 
             {visibilitySettings.showMonthProgress && (
               <div>
@@ -784,17 +832,18 @@ export default function Dashboard() {
       )}
 
       {editingDate && (
-      <ShiftEditor
-        date={editingDate}
-        shift={getEditingShift()}
-        onSave={handleSaveShift}
-        onClose={() => setEditingDate(null)}
-        formattedDate={formatDateString(editingDate) || ''}
-        scheduleType={scheduleType}
-        schedule5DayType={schedule5DayType}
-        scheduleData={scheduleData}
-        setScheduleData={setScheduleData}
-      />
+       <ShiftEditor
+         date={editingDate}
+         shift={getEditingShift()}
+         onSave={handleSaveShift}
+         onClose={() => setEditingDate(null)}
+         formattedDate={formatDateString(editingDate) || ''}
+         scheduleType={scheduleType}
+         schedule5DayType={schedule5DayType}
+         scheduleData={scheduleData}
+         setScheduleData={setScheduleData}
+         currentTeamId={selectedTeam || undefined}
+       />
       )}
 
       {editingGlobalNotes && (

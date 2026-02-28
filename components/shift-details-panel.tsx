@@ -1,6 +1,6 @@
  "use client"
 
- import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AddNotificationDialog } from "./add-notification-dialog"
 import type { Shift } from "@/lib/types"
 import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
+import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
 
  interface ShiftDetailsPanelProps {
   shift: Shift | null
@@ -21,6 +22,7 @@ import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
   onNoteDelete: (date: string) => void
   scheduleData: any
   setScheduleData: (data: any) => void
+  currentTeamId?: string
 }
 
  export function ShiftDetailsPanel({
@@ -33,7 +35,8 @@ import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
   onNotificationDelete,
   onNoteDelete,
   scheduleData,
-  setScheduleData
+  setScheduleData,
+  currentTeamId
 }: ShiftDetailsPanelProps) {
    const [isEditingNote, setIsEditingNote] = useState(false)
    const [currentNote, setCurrentNote] = useState("")
@@ -141,25 +144,49 @@ import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
      }
    }
 
-   // Функция удаления заметки
-   const handleRemoveNote = () => {
-     // Проверяем, есть ли уведомления, связанные с этой заметкой
-     const hasNotifications = shift?.notifications && shift.notifications.length > 0
+    // Функция удаления заметки
+    const handleRemoveNote = () => {
+      // Проверяем, есть ли уведомления, связанные с этой заметкой
+      const hasNotifications = shift?.notifications && shift.notifications.length > 0
 
-     if (hasNotifications) {
-       setShowDeleteAlert(true)
-     } else if (date && onNoteDelete) {
-       onNoteDelete(date)
-     }
-   }
+      if (hasNotifications) {
+        setShowDeleteAlert(true)
+      } else if (date && onNoteDelete) {
+        onNoteDelete(date)
+      }
+    }
 
-   // Функция подтверждения удаления (даже с уведомлениями)
-   const handleConfirmNoteDelete = () => {
-     if (date && onNoteDelete) {
-       onNoteDelete(date)
-     }
-     setShowDeleteAlert(false)
-   }
+    // Функция подтверждения удаления (даже с уведомлениями)
+    const handleConfirmNoteDelete = () => {
+      if (date && onNoteDelete) {
+        onNoteDelete(date)
+      }
+      setShowDeleteAlert(false)
+    }
+
+    // Обработчик удаления смены с сохранением изменений для команды
+    const handleDeleteShift = () => {
+      try {
+        // Обновляем данные в хранилище команды, если указан teamId
+        if (currentTeamId && date) {
+          const existingTeamShifts = loadTeamShifts(currentTeamId) || new Map<string, Shift>();
+          existingTeamShifts.set(date, {
+            date,
+            type: 'off',
+            hours: 0,
+            minutes: 0
+          });
+          saveTeamShifts(currentTeamId, existingTeamShifts);
+        }
+
+        // Всегда выполняем оригинальную функцию удаления
+        onDelete();
+      } catch (error) {
+        console.error("Failed to update team shifts:", error);
+        // Даже при ошибке выполняем удаление
+        onDelete();
+      }
+    }
 
    // Если дата не выбрана, показываем сообщение
    if (!date) {
@@ -334,14 +361,14 @@ import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
              </div>
            )}
 
-           <div className="flex gap-2 pt-4">
-             <Button variant="outline" onClick={onEdit} className="flex-1">
-               Редактировать смену
-             </Button>
-             <Button variant="destructive" onClick={onDelete} className="flex-1">
-               Удалить смену
-             </Button>
-           </div>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={onEdit} className="flex-1">
+                Редактировать смену
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteShift} className="flex-1">
+                Удалить смену
+              </Button>
+            </div>
          </div>
        ) : (
          <div className="space-y-4">

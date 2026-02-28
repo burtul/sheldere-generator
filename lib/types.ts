@@ -29,13 +29,19 @@ export interface GlobalSettings {
   customNumber?: number
 }
 
+export interface TeamShiftData {
+  teamId: string;
+  shifts: Map<string, Shift>;
+}
+
 export interface ScheduleData {
-  startDate: Date
-  shifts: Map<string, Shift>
-  monthlySettings: Map<string, MonthlySettings>
-  globalSettings: GlobalSettings
-  globalNotes?: string
-  vacations?: { startDate: Date; days: number }[]
+  startDate: Date;
+  shifts: Map<string, Shift>;
+  monthlySettings: Map<string, MonthlySettings>;
+  globalSettings: GlobalSettings;
+  globalNotes?: string;
+  vacations?: { startDate: Date; days: number }[];
+  teamShifts?: TeamShiftData[];
 }
 
 export interface Holiday {
