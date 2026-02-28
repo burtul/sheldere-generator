@@ -1,5 +1,6 @@
 import type { Shift, ShiftType } from "./types"
 import { generateHolidaysForYear } from "./holidays"
+import { isValidDate } from "./utils"
 
 // Функция для проверки, является ли день праздничным
 function isHoliday(date: Date): boolean {
@@ -30,7 +31,8 @@ const TEAM_PATTERNS = {
 /* ------------------------------------------------------------------ */
 /* БАЗОВАЯ ДАТА — ЯКОРЬ ПАТТЕРНА (ОЧЕНЬ ВАЖНО)                          */
 /* ------------------------------------------------------------------ */
-const PATTERN_BASE_DATE = new Date(2025, 0, 1) // 1 января 2025
+// Базовая дата загружается из настроек, если не задана — используется дата по умолчанию
+export const DEFAULT_PATTERN_BASE_DATE = new Date(2025, 0, 1) // 1 января 2025
 
 function getPatternIndex(
   baseDate: Date,
@@ -39,6 +41,12 @@ function getPatternIndex(
 ) {
   if (patternLength <= 0) {
     throw new Error("Pattern length must be positive")
+  }
+  
+  // Проверяем валидность входных дат
+  if (!isValidDate(baseDate) || !isValidDate(targetDate)) {
+    console.error('Invalid date provided to getPatternIndex');
+    return 0; // Возвращаем безопасное значение по умолчанию
   }
 
   const diffDays = Math.floor(
@@ -53,7 +61,8 @@ function getPatternIndex(
 export function generateSchedule(
   startDate: Date,
   daysAhead = 365,
-  team: keyof typeof TEAM_PATTERNS | "5 рабочих дней" | "5 рабочих дней 8-15" = "Бригада 1"
+  team: keyof typeof TEAM_PATTERNS | "5 рабочих дней" | "5 рабочих дней 8-15" = "Бригада 1",
+  baseDate?: Date
 ): Map<string, Shift> {
   const shifts = new Map<string, Shift>
 
@@ -74,14 +83,19 @@ export function generateSchedule(
     if (!defaultPattern) {
       throw new Error("Default team pattern not found.")
     }
-    return generateSchedule(startDate, daysAhead, defaultTeam)
+    return generateSchedule(startDate, daysAhead, defaultTeam, baseDate)
   }
 
   const endDate = new Date(startDate)
   endDate.setDate(endDate.getDate() + daysAhead)
 
+  // Используем переданную базовую дату или дефолтную с защитой от undefined
+  const effectiveBaseDate = baseDate ? (
+    isValidDate(baseDate) ? baseDate : DEFAULT_PATTERN_BASE_DATE
+  ) : DEFAULT_PATTERN_BASE_DATE
+
   let patternIndex = getPatternIndex(
-    PATTERN_BASE_DATE,
+    effectiveBaseDate,
     startDate,
     pattern.length
   )

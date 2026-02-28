@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
+import { isValidDate, isDateStringValid } from "@/lib/utils"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
 import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
@@ -43,7 +44,25 @@ export default function BurgerMenu({
   onVacationDelete,
   vacations = [],
 }: BurgerMenuProps) {
+  const { globalSettings } = scheduleData;
   const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
+  const [baseDate, setBaseDate] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('baseDate');
+      const defaultBaseDate = new Date(2025, 0, 1).toISOString().split('T')[0];
+      // Проверяем формат YYYY-MM-DD и валидность даты
+      return stored && isDateStringValid(stored) && isValidDate(new Date(stored)) ? stored : globalSettings.baseDate?.toISOString().split('T')[0] || defaultBaseDate;
+    }
+    // Серверный рендер - используем дефолтную дату
+    return globalSettings.baseDate?.toISOString().split('T')[0] || new Date(2025, 0, 1).toISOString().split('T')[0];
+  })
+
+  // Синхронизация с globalSettings
+  useEffect(() => {
+    if (globalSettings.baseDate) {
+      setBaseDate(globalSettings.baseDate.toISOString().split('T')[0]);
+    }
+  }, [globalSettings.baseDate]);
   const [dayColor, setDayColor] = useState(scheduleData.globalSettings.dayShiftColor)
   const [nightColor, setNightColor] = useState(scheduleData.globalSettings.nightShiftColor)
   const [offColor, setOffColor] = useState(scheduleData.globalSettings.offShiftColor)
@@ -343,19 +362,51 @@ export default function BurgerMenu({
                       label="2 через 2 (12ч)"
                       sx={{ mb: 1 }}
                     />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
-                      2 дн → 2 вых → 2 ноч → отс → вых
-                    </Typography>
+                   <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
+                     2 дн → 2 вых → 2 ноч → отс → вых
+                   </Typography>
 
-                    <FormControlLabel
-                      value="5days"
-                      control={<Radio />}
-                      label="5 рабочих дней"
-                      sx={{ mb: 1 }}
-                    />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
-                      5 рабочих дней (8h/8h15) → 2 вых
-                    </Typography>
+                   <FormControlLabel
+                     value="5days"
+                     control={<Radio />}
+                     label="5 рабочих дней"
+                     sx={{ mb: 1 }}
+                   />
+                   <Typography variant="body2" color="text.secondary" sx={{ ml: 3, mb: 2 }}>
+                     5 рабочих дней (8h/8h15) → 2 вых
+                   </Typography>
+
+                   <Box sx={{ mt: 2, mb: 1 }}>
+                     <Typography variant="subtitle1" gutterBottom>
+                       Базовая дата графика
+                     </Typography>
+                     <TextField
+                       type="date"
+                       value={baseDate}
+                       onChange={(e) => {
+                         const newDate = e.target.value;
+                         if (isDateStringValid(newDate) && isValidDate(new Date(newDate))) {
+                           setBaseDate(newDate);
+                           if (typeof window !== 'undefined') {
+                             localStorage.setItem('baseDate', newDate);
+                             // Триггерим событие для принудительного обновления графиков
+                             window.dispatchEvent(new Event('baseDateChanged'));
+                           }
+                         } else {
+                           console.error('Некорректный формат даты:', newDate);
+                         }
+                       }}
+                       // Отображаем текущую базовую дату в формате YYYY-MM-DD
+                       inputProps={{ min: "2023-01-01", max: "2030-12-31" }}
+                       InputLabelProps={{ shrink: true }}
+                       variant="outlined"
+                       fullWidth
+                       sx={{ mb: 1 }}
+                     />
+                     <Typography variant="caption" display="block" gutterBottom>
+                       Текущая опорная дата с которой  начинается генерация графика
+                     </Typography>
+                   </Box>
                   </RadioGroup>
                 </FormControl>
               </Box>
@@ -500,7 +551,7 @@ export default function BurgerMenu({
                     sx={{ mb: 1 }}
                   />
                   <Typography variant="caption" display="block" gutterBottom>
-                    Для расчета аванса
+                    Для расчета аванса(учитываются часы до 16го числа)
                   </Typography>
                 </Box>
 

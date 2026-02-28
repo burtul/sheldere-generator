@@ -1,4 +1,6 @@
 import type { ScheduleData, Shift } from "./types"
+import { isValidDate } from "./utils"
+import { DEFAULT_PATTERN_BASE_DATE } from "./schedule-utils"
 
 const STORAGE_KEY = "shift_schedule_data"
 const TEAM_SHIFTS_STORAGE_KEY = (teamId: string) => {
@@ -11,7 +13,11 @@ function serializeScheduleData(data: ScheduleData): any {
     startDate: data.startDate.toISOString(),
     shifts: Array.from(data.shifts.entries()),
     monthlySettings: Array.from(data.monthlySettings.entries()),
-    globalSettings: data.globalSettings,
+    globalSettings: {
+      ...data.globalSettings,
+      // Преобразуем Date в ISO-строку для сохранения
+      baseDate: data.globalSettings.baseDate instanceof Date ? data.globalSettings.baseDate.toISOString() : undefined,
+    },
     globalNotes: data.globalNotes,
     vacations: data.vacations?.map(v => ({
       startDate: v.startDate.toISOString(),
@@ -49,18 +55,29 @@ function deserializeScheduleData(serialized: any): ScheduleData {
         minutes,
       });
     });
-    
+
     return {
       teamId: teamData.teamId,
       shifts: teamShiftsMap,
     };
   }) ?? [];
 
+  // Десериализация globalSettings с миграцией для старого формата
+  const globalSettings = {
+    ...serialized.globalSettings,
+    baseDate: serialized.globalSettings?.baseDate ? (
+      () => {
+        const date = new Date(serialized.globalSettings.baseDate);
+        return isValidDate(date) ? date : DEFAULT_PATTERN_BASE_DATE;
+      }
+    )() : DEFAULT_PATTERN_BASE_DATE,
+  };
+
   return {
     startDate: new Date(serialized.startDate),
     shifts,
     monthlySettings: new Map(serialized.monthlySettings),
-    globalSettings: serialized.globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" },
+    globalSettings: globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" },
     globalNotes: serialized.globalNotes || "",
     vacations: Array.isArray(serialized.vacations)
       ? serialized.vacations.map((v: any) => ({

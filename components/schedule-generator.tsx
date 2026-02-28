@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { generateSchedule, SHIFT_PATTERN } from "@/lib/schedule-utils"
+import { generateSchedule, SHIFT_PATTERN, DEFAULT_PATTERN_BASE_DATE } from "@/lib/schedule-utils"
 import { AlertCircle } from "lucide-react"
 
 interface ScheduleGeneratorProps {
@@ -27,7 +27,20 @@ export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: Schedule
       teamName = `Бригада ${startShift + 1}` as "Бригада 1" | "Бригада 2" | "Бригада 3" | "Бригада 4"
     }
 
-    const shifts = generateSchedule(date, years * 365, teamName)
+    // Получаем базовую дату из localStorage с принудительным триггером обновления
+    let baseDateValue: Date | undefined = undefined
+    if (typeof window !== 'undefined') {
+      const savedBaseDate = localStorage.getItem('baseDate')
+      if (savedBaseDate) {
+        baseDateValue = new Date(savedBaseDate)
+        // Принудительно обновляем состояние, чтобы сработал ререндер
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new Event('baseDateChanged'))
+        }
+      }
+    }
+
+    const shifts = generateSchedule(date, years * 365, teamName, baseDateValue)
     onGenerate(shifts, date)
   }
 
@@ -102,21 +115,21 @@ export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: Schedule
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Количество лет</label>
-          <input
-            type="number"
-            min="1"
-            max="5"
-            value={years}
-            onChange={(e) => setYears(Number(e.target.value))}
-            className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
-          />
-        </div>
+         <div>
+           <label className="block text-sm font-medium text-foreground mb-2">Количество лет</label>
+           <input
+             type="number"
+             min="1"
+             max="5"
+             value={years}
+             onChange={(e) => setYears(Number(e.target.value))}
+             className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
+           />
+         </div>
 
-        <Button onClick={handleGenerate} className="w-full">
-          Генерация графика
-        </Button>
+         <Button onClick={handleGenerate} className="w-full">
+           Генерация графика
+         </Button>
       </div>
     </div>
   )

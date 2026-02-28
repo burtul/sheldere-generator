@@ -27,6 +27,7 @@ export interface GlobalSettings {
   nightShiftColor: string
   offShiftColor: string
   customNumber?: number
+  baseDate?: Date // Используется объект Date для унифицированной обработки
 }
 
 export interface TeamShiftData {

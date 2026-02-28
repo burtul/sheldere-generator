@@ -36,7 +36,7 @@ export function GlobalSettingsModal({ settings, onSave, onGenerate, onClose }: G
       offShiftColor: offColor,
       ...(numValue !== undefined && !isNaN(numValue) && { customNumber: numValue })
     }
-    
+
     onSave(updatedSettings)
     setActiveSection("main")
   }
@@ -195,13 +195,14 @@ export function GlobalSettingsModal({ settings, onSave, onGenerate, onClose }: G
             </div>
           )}
 
-          {/* Schedule Generator Section */}
-          {activeSection === "schedule" && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Генератор графика</h3>
-              <ScheduleGenerator onGenerate={handleGenerateSchedule} />
-            </div>
-          )}
+              {/* Schedule Generator Section */}
+              {activeSection === "schedule" && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Генератор графика</h3>
+                  <ScheduleGenerator onGenerate={handleGenerateSchedule} />
+                </div>
+              )}
+
         </div>
       </div>
     </div>

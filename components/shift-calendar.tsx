@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Edit2, Bell, FileText } from "lucide-react"
 import type { Shift, MonthlySettings, GlobalSettings, Holiday } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15 } from "@/lib/schedule-utils"
+import { cn, isDateStringValid } from "@/lib/utils"
+import { getWorkDaysInMonth, generateSchedule, generate5DaySchedule, generate5DaySchedule15, DEFAULT_PATTERN_BASE_DATE } from "@/lib/schedule-utils"
 import { exampleHolidays, generateHolidaysForYear } from "@/lib/holidays"
 
 interface ShiftCalendarProps {
@@ -69,17 +69,49 @@ export function ShiftCalendar({
   const holidaysForYear = useMemo(() => {
     // Всегда генерируем праздники для текущего года
     // Если в exampleHolidays уже есть праздники для этого года, используем их
-    const existingHolidays = exampleHolidays.filter(h => 
+    const existingHolidays = exampleHolidays.filter(h =>
       new Date(h.date).getFullYear() === year
     )
-    
+
     if (existingHolidays.length > 0) {
       return existingHolidays
     }
-    
+
     // Иначе генерируем новые праздники
     return generateHolidaysForYear(year)
   }, [year])
+
+  // Обработчик изменения базовой даты (мемоизированный)
+  const handleBaseDateChange = useCallback(() => {
+    if (selectedTeam) {
+      const startDate = new Date(year, month, 1)
+      let newShifts: Map<string, Shift>
+
+      if (scheduleType === "5days") {
+        if (schedule5DayType === "8hours") {
+          newShifts = generate5DaySchedule(startDate, 180)
+        } else {
+          newShifts = generate5DaySchedule15(startDate, 180)
+        }
+      } else {
+        // Получаем актуальную базовую дату из localStorage с валидацией
+        const storedBaseDate = typeof window !== 'undefined' ? localStorage.getItem('baseDate') : null;
+        const baseDateValue = storedBaseDate && isDateStringValid(storedBaseDate) ?
+          new Date(storedBaseDate) : DEFAULT_PATTERN_BASE_DATE;
+        newShifts = generateSchedule(startDate, 180, selectedTeam as any, baseDateValue)
+      }
+
+      onGenerateSchedule(newShifts, startDate)
+    }
+  }, [year, month, selectedTeam, scheduleType, schedule5DayType, onGenerateSchedule]);
+
+  // Подписка на событие изменения базовой даты
+  useEffect(() => {
+    window.addEventListener('baseDateChanged', handleBaseDateChange)
+    return () => {
+      window.removeEventListener('baseDateChanged', handleBaseDateChange)
+    }
+  }, [handleBaseDateChange])
 
   // Функция для проверки, является ли день сегодняшним
   const isToday = (day: number) => {
