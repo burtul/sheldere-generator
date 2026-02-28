@@ -17,7 +17,7 @@ export function TeamSelector({ teams, selectedTeam, onTeamSelect, scheduleType =
 
   // Определяем доступные команды в зависимости от типа графика
   const availableTeams = scheduleType === "5days"
-    ? ["8 часов", "8 часов 15 минут"]
+    ? ["8 часов", "8 ч 15 м"]
     : teams
 
   return (

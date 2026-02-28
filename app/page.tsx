@@ -669,12 +669,6 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground">{"График смен"}</h1>
 
-                {/* Вот этот блок теперь будет в одной строке */}
-                <div className="flex items-center gap-1"> {/* Добавил gap для отступа */}
-                  <Telegram className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">@tan4ik_2</p>
-                </div>
-
               </div>
             </div>
             <div>
