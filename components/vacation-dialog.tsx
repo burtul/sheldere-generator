@@ -1,25 +1,27 @@
 import { useState } from "react"
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography } from "@mui/material"
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography, Alert, IconButton, Switch, FormControlLabel } from "@mui/material"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { ru } from "date-fns/locale"
+import { Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material"
 
 interface VacationDialogProps {
   open: boolean
   onClose: () => void
   onSave: (startDate: Date, days: number) => void
   onDelete: (index: number) => void
-  vacations: Array<{ startDate: Date, days: number }>
+  onToggleVacation?: (index: number, isVisible: boolean) => void
+  vacations: Array<{ startDate: Date, days: number, isVisible?: boolean }>
 }
 
-export default function VacationDialog({ open, onClose, onSave, onDelete, vacations = [] }: VacationDialogProps) {
+export default function VacationDialog({ open, onClose, onSave, onDelete, onToggleVacation, vacations = [] }: VacationDialogProps) {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [days, setDays] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
-  const [showVacations, setShowVacations] = useState<boolean>(false)
 
   const handleSave = () => {
+    // Валидируем данные перед сохранением
     if (!startDate) {
       setError("Пожалуйста, выберите дату начала отпуска")
       return
@@ -30,7 +32,10 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, vacati
       return
     }
 
+    // Сохраняем отпуск только если все данные корректны
     onSave(startDate, Number(days))
+
+    // Сбрасываем форму и закрываем диалог
     setStartDate(null)
     setDays("")
     setError(null)
@@ -44,64 +49,19 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, vacati
     onClose()
   }
 
-  const handleToggleVacations = () => {
-    setShowVacations(!showVacations)
-  }
-
-  const handleDeleteVacation = (index: number) => {
-    onDelete(index)
-  }
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Добавить отпуск</DialogTitle>
-        <DialogActions sx={{ justifyContent: 'flex-start', px: 3, pt: 0 }}>
-          <Button onClick={handleToggleVacations} color="secondary">
-            {showVacations ? 'Скрыть отпуска' : 'Показать отпуска'}
-          </Button>
-        </DialogActions>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Управление отпусками
+          <IconButton onClick={handleClose} sx={{ p: 0.5 }} aria-label="Закрыть">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
         <DialogContent>
-          {showVacations ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              {vacations.length > 0 ? (
-                vacations.map((vacation, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 1,
-                      p: 1,
-                      border: '1px solid #ccc',
-                      borderRadius: 1,
-                    }}
-                  >
-                    <Typography variant="body1">
-                      <strong>Начало:</strong> {vacation.startDate.toLocaleDateString("ru-RU")}
-                    </Typography>
-
-                    <Typography variant="body1">
-                      <strong>Дней:</strong> {vacation.days}
-                    </Typography>
-
-                    <Button
-                      color="error"
-                      size="small"
-                      onClick={() => handleDeleteVacation(index)}
-                    >
-                      Удалить
-                    </Button>
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                  Отпусков пока нет
-                </Typography>
-              )}
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <DatePicker
                 label="Дата начала отпуска"
                 value={startDate}
@@ -109,12 +69,7 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, vacati
                   setStartDate(newValue)
                   setError(null)
                 }}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    error: !!error && !startDate
-                  }
-                }}
+                slotProps={{ textField: { fullWidth: true, error: !!error && !startDate } }}
               />
               <TextField
                 label="Количество дней"
@@ -130,22 +85,79 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, vacati
                 helperText={error && (!days || isNaN(Number(days)) || Number(days) <= 0) ? error : undefined}
               />
               {error && (!days || isNaN(Number(days)) || Number(days) <= 0) && (
-                <Typography color="error" variant="body2">
-                  {error}
+                <Alert severity="error" sx={{ mt: 1, py: 0.5 }}>
+                  <Typography variant="body2" color="error">
+                    {error}
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>Список отпусков:</Typography>
+              {vacations.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {vacations.map((vacation, index) => (
+                     <Box
+                       key={index}
+                       sx={{ 
+                         display: 'flex',
+                         justifyContent: 'space-between',
+                         alignItems: 'center',
+                         p: 1.5,
+                         border: '1px solid',
+                         borderColor: 'divider',
+                         borderRadius: 1,
+                         backgroundColor: 'background.paper',
+                         '&:hover': {
+                           backgroundColor: 'action.hover',
+                         }
+                       }}
+                     >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                           <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={vacation.isVisible !== false}
+                                  onChange={(e) => onToggleVacation?.(index, e.target.checked)}
+                                  color="primary"
+                                  size="small"
+                                />
+                              }
+                             label=""
+                           />
+                         <Box>
+                           <Typography variant="body2">
+                             <strong>Начало:</strong> {vacation.startDate.toLocaleDateString("ru-RU")}
+                           </Typography>
+                           <Typography variant="body2">
+                             <strong>Дней:</strong> {vacation.days}
+                           </Typography>
+                         </Box>
+                       </Box>
+                       <IconButton
+                         color="error"
+                         size="small"
+                         onClick={() => onDelete(index)}
+                         sx={{ minWidth: 'auto' }}
+                         aria-label="Удалить отпуск"
+                       >
+                         <DeleteIcon fontSize="small" />
+                       </IconButton>
+                     </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2, backgroundColor: '#f9f9f9', borderRadius: 1 }}>
+                  Отпусков пока нет
                 </Typography>
               )}
             </Box>
-          )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} color="secondary">
-            Отмена
-          </Button>
-          {!showVacations && (
-            <Button onClick={handleSave} color="primary" variant="contained">
-              Сохранить
-            </Button>
-          )}
+          <Button onClick={handleClose} color="secondary">Отмена</Button>
+          <Button onClick={handleSave} color="primary" variant="contained">Сохранить</Button>
         </DialogActions>
       </Dialog>
     </LocalizationProvider>

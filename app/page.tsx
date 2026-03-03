@@ -262,16 +262,30 @@ export default function Dashboard() {
         vacationToDelete.days
       )
 
-      vacationDates.forEach(date => {
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-
-        const shift = updatedShifts.get(dateStr)
-
-        // ⬇️ Удаляем ТОЛЬКО отпускные off
-        if (shift?.type === "off") {
-          updatedShifts.delete(dateStr)
+      // Собираем все даты других видимых отпусков
+      const otherVisibleDates = new Set<string>();
+      prev.vacations.forEach((v, idx) => {
+        if (idx !== index && v.isVisible !== false) {
+          const otherDates = calculateVacationDaysWithHolidays(v.startDate, v.days);
+          otherDates.forEach(d => {
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            otherVisibleDates.add(dateStr);
+          });
         }
-      })
+      });
+
+      // Удаляем только те даты, которые не покрываются другими видимыми отпусками
+      vacationDates.forEach(date => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        // Проверяем, что дата НЕ покрывается другими видимыми отпусками
+        if (!otherVisibleDates.has(dateStr)) {
+          const shift = updatedShifts.get(dateStr);
+          // Удаляем ТОЛЬКО если это отпускная смена (type === "off")
+          if (shift?.type === "off") {
+            updatedShifts.delete(dateStr);
+          }
+        }
+      });
 
       return {
         ...prev,
@@ -395,6 +409,28 @@ export default function Dashboard() {
     setCompletedTodos(newCompletedTodos)
   }
 
+  const getValidTeam = (team: string): string => {
+    const validTeams = ["Бригада 1", "Бригада 2", "Бригада 3", "Бригада 4"]
+    return validTeams.includes(team) ? team : "Бригада 4"
+  }
+
+  const applyVisibleVacationsToSchedule = (shifts: Map<string, Shift>, vacations: { startDate: Date; days: number; isVisible?: boolean }[]) => {
+    vacations.forEach(vacation => {
+      if (vacation.isVisible !== false && vacation.isVisible !== undefined) {
+        const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days)
+        vacationDates.forEach(date => {
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+          shifts.set(dateStr, {
+            date: dateStr,
+            type: "off",
+            hours: 0,
+            minutes: 0,
+          })
+        })
+      }
+    })
+  }
+
   const handleTeamSelect = (team: string) => {
     setSelectedTeam(team)
     const startDate = new Date(2025, 0, 1)
@@ -420,18 +456,22 @@ export default function Dashboard() {
             newShifts.set(date, shift);
           }
         });
-      } else {
-        // На случай, если выбрана бригада (не должно происходить для 5days)
-        const generatedShifts = generateSchedule(startDate, 7200, team as any);
-        generatedShifts.forEach((shift, date) => {
-          if (!newShifts.has(date)) {
-            newShifts.set(date, shift);
-          }
-        });
-      }
+    } else {
+      // На случай, если выбрана бригада (не должно происходить для 5days)
+      const teamToUse = getValidTeam(team)
+      
+      const generatedShifts = generateSchedule(startDate, 7200, teamToUse as any);
+      generatedShifts.forEach((shift, date) => {
+        if (!newShifts.has(date)) {
+          newShifts.set(date, shift);
+        }
+      });
+    }
     } else {
       // Для 2x2 графика используем стандартную генерацию
-      const generatedShifts = generateSchedule(startDate, 7200, team as any);
+      const teamToUse = getValidTeam(team)
+      
+      const generatedShifts = generateSchedule(startDate, 7200, teamToUse as any);
         generatedShifts.forEach((shift, date) => {
           if (!newShifts.has(date)) {
             newShifts.set(date, shift);
@@ -448,16 +488,16 @@ export default function Dashboard() {
         });
     }
 
-             // 3. Применяем teamShifts ТОЛЬКО для смен с указанным типом (shift.type)
+     // 3. Применяем teamShifts ТОЛЬКО для смен с указанным типом (shift.type)
      const teamShifts = loadTeamShifts(team);
      if (teamShifts) {
        teamShifts.forEach((shift: Shift, date: string) => {
          if (shift.type && newShifts.has(date)) {
            const existingShift = newShifts.get(date)!;
            newShifts.set(date, {
-             ...existingShift,       // Сохраняем все существующие данные
-             type: shift.type,        // Обновляем только тип
-             hours: shift.hours,      // Опционально: обновляем часы/минуты
+             ...existingShift,      // Сохраняем все существующие данные
+             type: shift.type,       // Обновляем только тип
+             hours: shift.hours,     // Опционально: обновляем часы/минуты
              minutes: shift.minutes
            });
          }
@@ -484,10 +524,15 @@ export default function Dashboard() {
       newShifts.set(date, shift)
     })
 
+    // Применяем видимые отпуска к новому графику
+    const preservedVacations = scheduleData.vacations || []
+    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
+
     setScheduleData({
       ...scheduleData,
       startDate: startDate,
       shifts: newShifts,
+      vacations: preservedVacations
     })
   }
 
@@ -549,11 +594,16 @@ export default function Dashboard() {
       newShifts.set(date, shift)
     })
 
+    // Применяем видимые отпуска к новому графику
+    const preservedVacations = scheduleData.vacations || []
+    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
+
     setScheduleData({
       ...scheduleData,
       startDate: startDate,
       shifts: newShifts,
       globalSettings: newGlobalSettings,
+      vacations: preservedVacations
     })
   }
 
@@ -590,10 +640,15 @@ export default function Dashboard() {
       newShifts.set(date, shift)
     })
 
+    // Применяем видимые отпуска к новому графику
+    const preservedVacations = scheduleData.vacations || []
+    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
+
     setScheduleData({
       ...scheduleData,
       startDate: startDate,
       shifts: newShifts,
+      vacations: preservedVacations
     })
   }
 
@@ -613,40 +668,107 @@ export default function Dashboard() {
         visibilitySettings={visibilitySettings}
         onScheduleTypeChange={handleScheduleTypeChange}
         currentScheduleType={scheduleType}
-        vacations={scheduleData?.vacations ?? []}
-        onVacationSave={(vacation) => {
-          setScheduleData(prev => {
-            if (!prev) return prev
+          vacations={scheduleData?.vacations ?? []}
+         onVacationSave={(vacation) => {
+           setScheduleData(prev => {
+             if (!prev) return prev
 
-            const updatedShifts = new Map(prev.shifts)
+             const updatedShifts = new Map(prev.shifts)
 
-            const vacationDates = calculateVacationDaysWithHolidays(
-              vacation.startDate,
-              vacation.days
-            )
+             const vacationDates = calculateVacationDaysWithHolidays(
+               vacation.startDate,
+               vacation.days
+             )
 
-            vacationDates.forEach((date: Date) => {
-              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+             vacationDates.forEach((date: Date) => {
+               const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 
-              updatedShifts.set(dateStr, {
-                date: dateStr,
-                type: "off",
-                hours: 0,
-                minutes: 0,
-              })
-            })
+               updatedShifts.set(dateStr, {
+                 date: dateStr,
+                 type: "off",
+                 hours: 0,
+                 minutes: 0,
+               })
+             })
 
-            return {
-              ...prev,
-              shifts: updatedShifts,
-              vacations: [...(prev.vacations ?? []), vacation],
+             return {
+               ...prev,
+               shifts: updatedShifts,
+               vacations: [...(prev.vacations ?? []), { ...vacation, isVisible: true }],
+             }
+           })
+         }}
+         onVacationDelete={(index) => {
+           console.log("DELETE IN PAGE", index)
+           handleVacationDelete(index)
+         }}
+           onToggleVacation={(index: number, isVisible: boolean) => {
+      setScheduleData(prev => {
+        if (!prev) return prev
+
+        const updatedVacations = [...(prev.vacations || [])]
+        updatedVacations[index] = { ...updatedVacations[index], isVisible }
+
+        // Обновляем график в зависимости от видимости отпуска
+        const updatedShifts = new Map(prev.shifts)
+
+        // Применяем все видимые отпуска к графику
+        applyVisibleVacationsToSchedule(updatedShifts, updatedVacations);
+
+        // Если отпуск скрыт, удаляем его дни из графика только если они не покрываются другими видимыми отпусками
+        if (!isVisible) {
+          const vacation = updatedVacations[index];
+          const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days);
+
+          // Собираем все даты других видимых отпусков
+          const otherVisibleDates = new Set<string>();
+          updatedVacations.forEach((v, idx) => {
+            if (idx !== index && v.isVisible !== false) {
+              const otherDates = calculateVacationDaysWithHolidays(v.startDate, v.days);
+              otherDates.forEach(d => {
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                otherVisibleDates.add(dateStr);
+              });
             }
-          })
-        }}
-        onVacationDelete={(index) => {
-          console.log("DELETE IN PAGE", index)
-          handleVacationDelete(index)
-        }}
+          });
+
+          // Удаляем только те даты, которые не покрываются другими видимыми отпусками
+          vacationDates.forEach(date => {
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            // Проверяем, что дата НЕ покрывается другими видимыми отпусками
+            if (!otherVisibleDates.has(dateStr)) {
+              const shift = updatedShifts.get(dateStr);
+              // Удаляем ТОЛЬКО если это отпускная смена (type === "off")
+              if (shift?.type === "off") {
+                updatedShifts.delete(dateStr);
+              }
+            }
+          });
+        }
+
+        // Если отпуск стал видимым, применяем его к графику
+        if (isVisible) {
+          const vacation = updatedVacations[index];
+          const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days);
+
+          vacationDates.forEach(date => {
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            updatedShifts.set(dateStr, {
+              date: dateStr,
+              type: "off",
+              hours: 0,
+              minutes: 0,
+            });
+          });
+        }
+
+        return {
+          ...prev,
+          shifts: updatedShifts,
+          vacations: updatedVacations,
+        }
+      })
+    }}
 
 
 

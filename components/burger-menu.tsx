@@ -21,12 +21,10 @@ interface BurgerMenuProps {
   visibilitySettings?: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }
   onScheduleTypeChange?: (scheduleType: "2x2" | "5days") => void
   currentScheduleType?: "2x2" | "5days"
-  vacations?: { startDate: Date; days: number }[]
+  vacations?: { startDate: Date; days: number; isVisible?: boolean }[]
   onVacationSave?: (vacation: { startDate: Date; days: number }) => void
   onVacationDelete?: (index: number) => void
-
-
-
+  onToggleVacation?: (index: number, isVisible: boolean) => void
 }
 
 export default function BurgerMenu({
@@ -42,6 +40,7 @@ export default function BurgerMenu({
   currentScheduleType = "2x2",
   onVacationSave,
   onVacationDelete,
+  onToggleVacation,
   vacations = [],
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
@@ -657,21 +656,26 @@ export default function BurgerMenu({
       </Dialog>
 
       {/* Vacation Dialog - Fixed syntax */}
-      <VacationDialog
-  open={openVacationDialog}
-  onClose={() => setOpenVacationDialog(false)}
-  onSave={(startDate, days) => {
-    if (onVacationSave) {
-      onVacationSave({ startDate, days })
-    }
-  }}
-  onDelete={(index) => {
-    if (onVacationDelete) {
-      onVacationDelete(index)
-    }
-  }}
-  vacations={vacations}
-/>
+               <VacationDialog
+          open={openVacationDialog}
+          onClose={() => setOpenVacationDialog(false)}
+          onSave={(startDate, days) => {
+            if (onVacationSave) {
+              onVacationSave({ startDate, days })
+            }
+          }}
+          onDelete={(index) => {
+            if (onVacationDelete) {
+              onVacationDelete(index)
+            }
+          }}
+          onToggleVacation={(index, isVisible) => {
+            if (onToggleVacation) {
+              onToggleVacation(index, isVisible)
+            }
+          }}
+          vacations={vacations}
+        />
 
 
     </ThemeProvider>

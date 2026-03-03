@@ -41,7 +41,7 @@ export interface ScheduleData {
   monthlySettings: Map<string, MonthlySettings>;
   globalSettings: GlobalSettings;
   globalNotes?: string;
-  vacations?: { startDate: Date; days: number }[];
+  vacations?: { startDate: Date; days: number; isVisible: boolean | undefined }[];
   teamShifts?: TeamShiftData[];
 }
 
