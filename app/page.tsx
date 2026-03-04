@@ -433,78 +433,43 @@ export default function Dashboard() {
 
   const handleTeamSelect = (team: string) => {
     setSelectedTeam(team)
+
+    const is8Hours = team === "8 часов"
+    const is8Hours15 = team === "8 часов 15 минут"
+
+    if (is8Hours) {
+      setSchedule5DayType("8hours")
+    } else if (is8Hours15) {
+      setSchedule5DayType("8-15")
+    }
+
     const startDate = new Date(2025, 0, 1)
-    // 1. Сначала загружаем текущие смены из scheduleData
-    let newShifts = new Map<string, Shift>(scheduleData.shifts);
+    let newShifts: Map<string, Shift>
 
-    // 2. Генерируем новый график только для дат, которых ещё нет в scheduleData
     if (scheduleType === "5days") {
-      // Для 5-дневного графика определяем тип по выбранной команде
-      if (team === "8 часов") {
-        setSchedule5DayType("8hours")
-        const generatedShifts = generate5DaySchedule(startDate, 7200);
-        generatedShifts.forEach((shift, date) => {
-          if (!newShifts.has(date)) {
-            newShifts.set(date, shift);
-          }
-        });
-      } else if (team === "8 часов 15 минут") {
-        setSchedule5DayType("8-15")
-        const generatedShifts = generate5DaySchedule15(startDate, 7200);
-        generatedShifts.forEach((shift, date) => {
-          if (!newShifts.has(date)) {
-            newShifts.set(date, shift);
-          }
-        });
+      newShifts = is8Hours15
+        ? generate5DaySchedule15(startDate, 7200)
+        : generate5DaySchedule(startDate, 7200)
     } else {
-      // На случай, если выбрана бригада (не должно происходить для 5days)
       const teamToUse = getValidTeam(team)
-      
-      const generatedShifts = generateSchedule(startDate, 7200, teamToUse as any);
-      generatedShifts.forEach((shift, date) => {
-        if (!newShifts.has(date)) {
-          newShifts.set(date, shift);
+      newShifts = generateSchedule(startDate, 7200, teamToUse as any)
+    }
+
+    const teamShifts = loadTeamShifts(team)
+    if (teamShifts) {
+      teamShifts.forEach((shift: Shift, date: string) => {
+        if (shift.type && newShifts.has(date)) {
+          const existingShift = newShifts.get(date)!
+          newShifts.set(date, {
+            ...existingShift,
+            type: shift.type,
+            hours: shift.hours,
+            minutes: shift.minutes,
+          })
         }
-      });
-    }
-    } else {
-      // Для 2x2 графика используем стандартную генерацию
-      const teamToUse = getValidTeam(team)
-      
-      const generatedShifts = generateSchedule(startDate, 7200, teamToUse as any);
-        generatedShifts.forEach((shift, date) => {
-          if (!newShifts.has(date)) {
-            newShifts.set(date, shift);
-          } else {
-            // Если смена уже существует, объединяем данные
-            const existingShift = newShifts.get(date)!;
-            newShifts.set(date, {
-              ...shift,
-              // Сохраняем существующие notes и notifications
-              notes: existingShift.notes,
-              notifications: existingShift.notifications,
-            });
-          }
-        });
+      })
     }
 
-     // 3. Применяем teamShifts ТОЛЬКО для смен с указанным типом (shift.type)
-     const teamShifts = loadTeamShifts(team);
-     if (teamShifts) {
-       teamShifts.forEach((shift: Shift, date: string) => {
-         if (shift.type && newShifts.has(date)) {
-           const existingShift = newShifts.get(date)!;
-           newShifts.set(date, {
-             ...existingShift,      // Сохраняем все существующие данные
-             type: shift.type,       // Обновляем только тип
-             hours: shift.hours,     // Опционально: обновляем часы/минуты
-             minutes: shift.minutes
-           });
-         }
-       });
-     }
-
-    // Сохраняем заметки и уведомления из текущих смен
     const preservedShifts = new Map<string, Shift>()
     scheduleData.shifts.forEach((shift, date) => {
       if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
@@ -513,29 +478,26 @@ export default function Dashboard() {
           preservedShifts.set(date, {
             ...newShift,
             notes: shift.notes,
-            notifications: shift.notifications
+            notifications: shift.notifications,
           })
         }
       }
     })
 
-    // Объединяем новые смены с сохраненными данными
     preservedShifts.forEach((shift, date) => {
       newShifts.set(date, shift)
     })
 
-    // Применяем видимые отпуска к новому графику
     const preservedVacations = scheduleData.vacations || []
     applyVisibleVacationsToSchedule(newShifts, preservedVacations)
 
     setScheduleData({
       ...scheduleData,
-      startDate: startDate,
+      startDate,
       shifts: newShifts,
-      vacations: preservedVacations
+      vacations: preservedVacations,
     })
   }
-
   const handleVisibilitySettingsSave = (settings: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }) => {
     setVisibilitySettings(settings)
   }

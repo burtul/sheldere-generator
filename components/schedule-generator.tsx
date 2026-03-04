@@ -110,7 +110,7 @@ export function ScheduleGenerator({ onGenerate, scheduleType = "2x2" }: Schedule
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
             >
               <option value="8hours">8 часов в день</option>
-              <option value="8-15">8 часов 15 минут Пн-Чт, 7 часов Пт</option>
+              <option value="8-15">8 часов 15 минут</option>
             </select>
           </div>
         )}

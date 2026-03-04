@@ -12,12 +12,12 @@ interface TeamSelectorProps {
   schedule5DayType?: "8hours" | "8-15"
 }
 
-export function TeamSelector({ teams, selectedTeam, onTeamSelect, scheduleType = "2x2", schedule5DayType = "8hours" }: TeamSelectorProps) {
+export function TeamSelector({ teams, selectedTeam, onTeamSelect, scheduleType = "2x2", }: TeamSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   // Определяем доступные команды в зависимости от типа графика
   const availableTeams = scheduleType === "5days"
-    ? ["8 часов", "8 ч 15 м"]
+    ? ["8 часов", "8 часов 15 минут"]
     : teams
 
   return (

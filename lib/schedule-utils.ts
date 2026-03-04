@@ -61,10 +61,10 @@ function getPatternIndex(
 export function generateSchedule(
   startDate: Date,
   daysAhead = 365,
-  team: keyof typeof TEAM_PATTERNS | "5 рабочих дней" | "5 рабочих дней 8-15" = "Бригада 1",
+  team: keyof typeof TEAM_PATTERNS | "5 рабочих дней" | "5 рабочих дней 8-15" ,
   baseDate?: Date
 ): Map<string, Shift> {
-  const shifts = new Map<string, Shift>
+  const shifts = new Map<string, Shift>()
 
   // Обработка специальных случаев для 5-дневных графиков
   if (team === "5 рабочих дней") {

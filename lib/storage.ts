@@ -80,11 +80,14 @@ function deserializeScheduleData(serialized: any): ScheduleData {
     globalSettings: globalSettings || { dayShiftColor: "#f59e0b", nightShiftColor: "#4f46e5" },
     globalNotes: serialized.globalNotes || "",
     vacations: Array.isArray(serialized.vacations)
-      ? serialized.vacations.map((v: any) => ({
-          startDate: new Date(v.startDate),
-          days: v.days,
-        }))
-      : [],
+  ? serialized.vacations
+      .filter((v: any) => v && v.startDate && typeof v.days === 'number')
+      .map((v: any) => ({
+        startDate: new Date(v.startDate),
+        days: v.days,
+      }))
+      .filter((v: any) => isValidDate(v.startDate))
+  : [],
     teamShifts,
   };
 }
