@@ -22,6 +22,7 @@ function serializeScheduleData(data: ScheduleData): any {
     vacations: data.vacations?.map(v => ({
       startDate: v.startDate.toISOString(),
       days: v.days,
+      isVisible: v.isVisible !== false,
     })) ?? [],
     teamShifts: data.teamShifts?.map(team => ({
       teamId: team.teamId,
@@ -85,6 +86,7 @@ function deserializeScheduleData(serialized: any): ScheduleData {
       .map((v: any) => ({
         startDate: new Date(v.startDate),
         days: v.days,
+        isVisible: v.isVisible !== false,
       }))
       .filter((v: any) => isValidDate(v.startDate))
   : [],

@@ -221,10 +221,17 @@ export default function Dashboard() {
   }
 
   const handleGenerateSchedule = (shifts: Map<string, Shift>, startDate: Date) => {
-    setScheduleData({
-      ...scheduleData,
-      startDate,
-      shifts,
+    setScheduleData(prev => {
+      if (!prev) return prev
+
+      const updatedShifts = new Map(shifts)
+      applyVisibleVacationsToSchedule(updatedShifts, prev.vacations || [])
+
+      return {
+        ...prev,
+        startDate,
+        shifts: updatedShifts,
+      }
     })
   }
 
@@ -416,7 +423,7 @@ export default function Dashboard() {
 
   const applyVisibleVacationsToSchedule = (shifts: Map<string, Shift>, vacations: { startDate: Date; days: number; isVisible?: boolean }[]) => {
     vacations.forEach(vacation => {
-      if (vacation.isVisible !== false && vacation.isVisible !== undefined) {
+      if (vacation.isVisible !== false) {
         const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days)
         vacationDates.forEach(date => {
           const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
@@ -671,58 +678,22 @@ export default function Dashboard() {
         const updatedVacations = [...(prev.vacations || [])]
         updatedVacations[index] = { ...updatedVacations[index], isVisible }
 
-        // Обновляем график в зависимости от видимости отпуска
         const updatedShifts = new Map(prev.shifts)
 
-        // Применяем все видимые отпуска к графику
-        applyVisibleVacationsToSchedule(updatedShifts, updatedVacations);
-
-        // Если отпуск скрыт, удаляем его дни из графика только если они не покрываются другими видимыми отпусками
-        if (!isVisible) {
-          const vacation = updatedVacations[index];
-          const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days);
-
-          // Собираем все даты других видимых отпусков
-          const otherVisibleDates = new Set<string>();
-          updatedVacations.forEach((v, idx) => {
-            if (idx !== index && v.isVisible !== false) {
-              const otherDates = calculateVacationDaysWithHolidays(v.startDate, v.days);
-              otherDates.forEach(d => {
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                otherVisibleDates.add(dateStr);
-              });
-            }
-          });
-
-          // Удаляем только те даты, которые не покрываются другими видимыми отпусками
-          vacationDates.forEach(date => {
-            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-            // Проверяем, что дата НЕ покрывается другими видимыми отпусками
-            if (!otherVisibleDates.has(dateStr)) {
-              const shift = updatedShifts.get(dateStr);
-              // Удаляем ТОЛЬКО если это отпускная смена (type === "off")
+        ;(prev.vacations || []).forEach(vacation => {
+          if (vacation.isVisible !== false) {
+            const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days)
+            vacationDates.forEach(date => {
+              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+              const shift = updatedShifts.get(dateStr)
               if (shift?.type === "off") {
-                updatedShifts.delete(dateStr);
+                updatedShifts.delete(dateStr)
               }
-            }
-          });
-        }
+            })
+          }
+        })
 
-        // Если отпуск стал видимым, применяем его к графику
-        if (isVisible) {
-          const vacation = updatedVacations[index];
-          const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days);
-
-          vacationDates.forEach(date => {
-            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-            updatedShifts.set(dateStr, {
-              date: dateStr,
-              type: "off",
-              hours: 0,
-              minutes: 0,
-            });
-          });
-        }
+        applyVisibleVacationsToSchedule(updatedShifts, updatedVacations)
 
         return {
           ...prev,
