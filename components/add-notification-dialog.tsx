@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { toast } from "sonner"
 
 interface AddNotificationDialogProps {
   onAddNotification: (time: string, message: string) => void
@@ -87,6 +88,7 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
       })
 
       onAddNotification(time, message)
+      toast.success("Уведомление сохранено")
       setOpen(false)
     } catch (error) {
       console.error('Error scheduling notification:', error)

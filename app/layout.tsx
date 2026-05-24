@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import { AppToaster } from "@/components/app-toaster"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -48,7 +49,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${_geist.className} ${_geistMono.className}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <AppToaster />
+      </body>
     </html>
   )
 }
