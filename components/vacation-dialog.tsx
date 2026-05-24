@@ -13,9 +13,20 @@ interface VacationDialogProps {
   onDelete: (index: number) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
   vacations: Array<{ startDate: Date, days: number, isVisible?: boolean }>
+  showWorkShiftsDuringVacation?: boolean
+  onShowWorkShiftsDuringVacationChange?: (value: boolean) => void
 }
 
-export default function VacationDialog({ open, onClose, onSave, onDelete, onToggleVacation, vacations = [] }: VacationDialogProps) {
+export default function VacationDialog({
+  open,
+  onClose,
+  onSave,
+  onDelete,
+  onToggleVacation,
+  vacations = [],
+  showWorkShiftsDuringVacation = false,
+  onShowWorkShiftsDuringVacationChange,
+}: VacationDialogProps) {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [days, setDays] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +79,30 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, onTogg
 
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+            <Box
+              sx={{
+                p: 1.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                backgroundColor: 'action.hover',
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showWorkShiftsDuringVacation}
+                    onChange={(e) => onShowWorkShiftsDuringVacationChange?.(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Показывать рабочие смены во время отпуска"
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', pl: 4.5 }}>
+                При включении в календаре видны смена по графику и отметка отпуска; при выключении дни отпуска отображаются как выходные.
+              </Typography>
+            </Box>
+
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <DatePicker
                 label="Дата начала отпуска"
@@ -131,7 +166,8 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, onTogg
                                   size="small"
                                 />
                               }
-                             label=""
+                              label=""
+                              title="Показывать отпуск на графике"
                            />
                          <Box>
                            <Typography variant="body2">

@@ -25,6 +25,8 @@ interface BurgerMenuProps {
   onVacationSave?: (vacation: { startDate: Date; days: number }) => void
   onVacationDelete?: (index: number) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
+  showWorkShiftsDuringVacation?: boolean
+  onShowWorkShiftsDuringVacationChange?: (value: boolean) => void
 }
 
 export default function BurgerMenu({
@@ -42,6 +44,8 @@ export default function BurgerMenu({
   onVacationDelete,
   onToggleVacation,
   vacations = [],
+  showWorkShiftsDuringVacation = false,
+  onShowWorkShiftsDuringVacationChange,
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
   const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
@@ -675,6 +679,8 @@ export default function BurgerMenu({
             }
           }}
           vacations={vacations}
+          showWorkShiftsDuringVacation={showWorkShiftsDuringVacation}
+          onShowWorkShiftsDuringVacationChange={onShowWorkShiftsDuringVacationChange}
         />
 
 

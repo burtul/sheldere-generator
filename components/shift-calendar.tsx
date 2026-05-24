@@ -23,6 +23,7 @@ interface ShiftCalendarProps {
   scheduleType?: "2x2" | "5days"
   schedule5DayType?: "8hours" | "8-15"
   onVacationSave?: (vacationDates: Date[]) => void
+  showWorkShiftsDuringVacation?: boolean
 }
 
 export function ShiftCalendar({
@@ -38,7 +39,8 @@ export function ShiftCalendar({
   onCurrentMonthChange,
   scheduleType = "2x2",
   schedule5DayType = "8hours",
-  onVacationSave
+  onVacationSave,
+  showWorkShiftsDuringVacation = false,
 }: ShiftCalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null)
@@ -206,7 +208,8 @@ export function ShiftCalendar({
           type: "off",
           hours: 0,
           minutes: 0,
-          notes: "Отпуск"
+          notes: "Отпуск",
+          isOnVacation: true,
         })
       })
       onGenerateSchedule(updatedShifts, new Date(year, month, 1))
@@ -365,25 +368,28 @@ export function ShiftCalendar({
            const dateStr = day
              ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
              : null
-           
-          // Проверяем только если день существует (не null)
+
           const holiday = day ? isHoliday(day) : false
           const today = day ? isToday(day) : false
-          
+          const isOnVacation = shift?.isOnVacation === true
+          const isWorkDuringVacation = isOnVacation && shift?.type !== "off"
+
           return (
             <div
               key={idx}
               onClick={() => day && dateStr && handleDateClick(dateStr)}
               className={cn(
-"h-16 sm:h-20 min-w-[40px] sm:min-w-[50px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
-                day ? "hover:border-primary/50 hover:shadow-sm bg-card" : "bg-muted/10",                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
+                "h-16 sm:h-20 min-w-[40px] sm:min-w-[50px] rounded-lg p-1 sm:p-2 cursor-pointer border flex flex-col items-center justify-center relative",
+                day ? "hover:border-primary/50 hover:shadow-sm bg-card" : "bg-muted/10",
+                day ? "hover:ring-2 hover:ring-primary/30" : "bg-muted/10",
                 day && !shift && "bg-muted/20 hover:bg-muted/30",
                 today && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                 scheduleType === "5days"
                   ? (shift?.type === "weekday" || shift?.type === "weekday15" || shift?.type === "weekday7") && "bg-[var(--work-color)] text-white shadow-sm"
                   : (shift?.type === "day") && "bg-[var(--day-color)] text-white shadow-sm",
                 (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white shadow-sm",
-                shift?.type === "off" && "bg-[var(--off-color)] text-white/90"
+                shift?.type === "off" && "bg-[var(--off-color)] text-white/90",
+                isWorkDuringVacation && "ring-2 ring-amber-400 ring-offset-1 ring-offset-background"
               )}
               style={getShiftStyle(day)}
             >
@@ -408,10 +414,40 @@ export function ShiftCalendar({
               {shift?.notes && !hasNotifications(shift) && (
                 <FileText className="absolute top-1 right-1 h-3 w-3 sm:h-4 sm:w-4 text-accent" />
               )}
+              {isOnVacation && (
+                <span
+                  className={cn(
+                    "absolute bottom-0.5 left-0.5 text-[9px] sm:text-[10px] font-bold px-1 rounded leading-none",
+                    isWorkDuringVacation
+                      ? "bg-amber-500/90 text-white"
+                      : "bg-black/45 text-white"
+                  )}
+                  title="Отпуск"
+                >
+                  Отп
+                </span>
+              )}
             </div>
           )
         })}
       </div>
+
+      {(showWorkShiftsDuringVacation || shifts.size > 0) &&
+        Array.from(shifts.values()).some((s) => s.isOnVacation) && (
+        <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block w-4 h-4 rounded border border-border"
+              style={{ backgroundColor: globalSettings.offShiftColor }}
+            />
+            <span>Отпуск (выходной)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-4 h-4 rounded bg-primary/80 ring-2 ring-amber-400" />
+            <span>Смена в отпуске</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

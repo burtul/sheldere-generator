@@ -19,6 +19,12 @@ import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification } from "@/lib/notification-utils"
+import {
+  applyVisibleVacationsToSchedule,
+  applyPreservedNotesAndVacations,
+  reapplyAllVacations,
+  type ReapplyVacationsParams,
+} from "@/lib/schedule-merge-utils"
 
 
 export default function Dashboard() {
@@ -220,18 +226,75 @@ export default function Dashboard() {
     )
   }
 
+  const getVacationReapplyParams = (): ReapplyVacationsParams => ({
+    scheduleType,
+    schedule5DayType,
+    selectedTeam,
+    startDate: scheduleData.startDate,
+  })
+
   const handleGenerateSchedule = (shifts: Map<string, Shift>, startDate: Date) => {
     setScheduleData(prev => {
       if (!prev) return prev
 
       const updatedShifts = new Map(shifts)
-      applyVisibleVacationsToSchedule(updatedShifts, prev.vacations || [])
+      applyVisibleVacationsToSchedule(updatedShifts, prev.vacations || [], {
+        showWorkShiftsDuringVacation: prev.showWorkShiftsDuringVacation,
+      })
 
       return {
         ...prev,
         startDate,
         shifts: updatedShifts,
       }
+    })
+  }
+
+  const handleShowWorkShiftsDuringVacationChange = (enabled: boolean) => {
+    setScheduleData((prev) => {
+      if (!prev) return prev
+      const updatedShifts = new Map(prev.shifts)
+      const next = { ...prev, showWorkShiftsDuringVacation: enabled }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+      return { ...next, shifts: updatedShifts }
+    })
+  }
+
+  const handleVacationSaveFromMenu = (vacation: { startDate: Date; days: number }) => {
+    setScheduleData((prev) => {
+      if (!prev) return prev
+      const updatedVacations = [...(prev.vacations ?? []), { ...vacation, isVisible: true }]
+      const updatedShifts = new Map(prev.shifts)
+      const next = { ...prev, vacations: updatedVacations }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+      return { ...next, shifts: updatedShifts }
+    })
+  }
+
+  const handleToggleVacation = (index: number, isVisible: boolean) => {
+    setScheduleData((prev) => {
+      if (!prev) return prev
+      const updatedVacations = [...(prev.vacations || [])]
+      updatedVacations[index] = { ...updatedVacations[index], isVisible }
+      const updatedShifts = new Map(prev.shifts)
+      const next = { ...prev, vacations: updatedVacations }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+      return { ...next, shifts: updatedShifts }
     })
   }
 
@@ -256,52 +319,20 @@ export default function Dashboard() {
   }
 
   const handleVacationDelete = (index: number) => {
-    setScheduleData(prev => {
-      if (!prev || !prev.vacations) return prev
-
-      const vacationToDelete = prev.vacations[index]
-      if (!vacationToDelete) return prev
-
+    setScheduleData((prev) => {
+      if (!prev?.vacations) return prev
+      const updatedVacations = prev.vacations.filter((_, i) => i !== index)
       const updatedShifts = new Map(prev.shifts)
-
-      const vacationDates = calculateVacationDaysWithHolidays(
-        vacationToDelete.startDate,
-        vacationToDelete.days
-      )
-
-      // Собираем все даты других видимых отпусков
-      const otherVisibleDates = new Set<string>();
-      prev.vacations.forEach((v, idx) => {
-        if (idx !== index && v.isVisible !== false) {
-          const otherDates = calculateVacationDaysWithHolidays(v.startDate, v.days);
-          otherDates.forEach(d => {
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            otherVisibleDates.add(dateStr);
-          });
-        }
-      });
-
-      // Удаляем только те даты, которые не покрываются другими видимыми отпусками
-      vacationDates.forEach(date => {
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-        // Проверяем, что дата НЕ покрывается другими видимыми отпусками
-        if (!otherVisibleDates.has(dateStr)) {
-          const shift = updatedShifts.get(dateStr);
-          // Удаляем ТОЛЬКО если это отпускная смена (type === "off")
-          if (shift?.type === "off") {
-            updatedShifts.delete(dateStr);
-          }
-        }
-      });
-
-      return {
-        ...prev,
-        shifts: updatedShifts,
-        vacations: prev.vacations.filter((_, i) => i !== index),
-      }
+      const next = { ...prev, vacations: updatedVacations }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+      return { ...next, shifts: updatedShifts }
     })
   }
-
 
   const handleDateClick = (dateStr: string) => {
     setEditingDate(dateStr)
@@ -421,23 +452,6 @@ export default function Dashboard() {
     return validTeams.includes(team) ? team : "Бригада 4"
   }
 
-  const applyVisibleVacationsToSchedule = (shifts: Map<string, Shift>, vacations: { startDate: Date; days: number; isVisible?: boolean }[]) => {
-    vacations.forEach(vacation => {
-      if (vacation.isVisible !== false) {
-        const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days)
-        vacationDates.forEach(date => {
-          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-          shifts.set(dateStr, {
-            date: dateStr,
-            type: "off",
-            hours: 0,
-            minutes: 0,
-          })
-        })
-      }
-    })
-  }
-
   const handleTeamSelect = (team: string) => {
     setSelectedTeam(team)
 
@@ -477,26 +491,8 @@ export default function Dashboard() {
       })
     }
 
-    const preservedShifts = new Map<string, Shift>()
-    scheduleData.shifts.forEach((shift, date) => {
-      if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
-        const newShift = newShifts.get(date)
-        if (newShift) {
-          preservedShifts.set(date, {
-            ...newShift,
-            notes: shift.notes,
-            notifications: shift.notifications,
-          })
-        }
-      }
-    })
-
-    preservedShifts.forEach((shift, date) => {
-      newShifts.set(date, shift)
-    })
-
+    applyPreservedNotesAndVacations(newShifts, scheduleData)
     const preservedVacations = scheduleData.vacations || []
-    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
 
     setScheduleData({
       ...scheduleData,
@@ -543,36 +539,15 @@ export default function Dashboard() {
       }
     }
 
-    // Сохраняем заметки и уведомления из текущих смен
-    const preservedShifts = new Map<string, Shift>()
-    scheduleData.shifts.forEach((shift, date) => {
-      if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
-        const newShift = newShifts.get(date)
-        if (newShift) {
-          preservedShifts.set(date, {
-            ...newShift,
-            notes: shift.notes,
-            notifications: shift.notifications
-          })
-        }
-      }
-    })
-
-    // Объединяем новые смены с сохраненными данными
-    preservedShifts.forEach((shift, date) => {
-      newShifts.set(date, shift)
-    })
-
-    // Применяем видимые отпуска к новому графику
+    applyPreservedNotesAndVacations(newShifts, scheduleData)
     const preservedVacations = scheduleData.vacations || []
-    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
 
     setScheduleData({
       ...scheduleData,
-      startDate: startDate,
+      startDate,
       shifts: newShifts,
       globalSettings: newGlobalSettings,
-      vacations: preservedVacations
+      vacations: preservedVacations,
     })
   }
 
@@ -589,35 +564,14 @@ export default function Dashboard() {
       setSelectedTeam("8 часов 15 минут")
     }
 
-    // Сохраняем заметки и уведомления из текущих смен
-    const preservedShifts = new Map<string, Shift>()
-    scheduleData.shifts.forEach((shift, date) => {
-      if (shift.notes || (shift.notifications && shift.notifications.length > 0)) {
-        const newShift = newShifts.get(date)
-        if (newShift) {
-          preservedShifts.set(date, {
-            ...newShift,
-            notes: shift.notes,
-            notifications: shift.notifications
-          })
-        }
-      }
-    })
-
-    // Объединяем новые смены с сохраненными данными
-    preservedShifts.forEach((shift, date) => {
-      newShifts.set(date, shift)
-    })
-
-    // Применяем видимые отпуска к новому графику
+    applyPreservedNotesAndVacations(newShifts, scheduleData)
     const preservedVacations = scheduleData.vacations || []
-    applyVisibleVacationsToSchedule(newShifts, preservedVacations)
 
     setScheduleData({
       ...scheduleData,
-      startDate: startDate,
+      startDate,
       shifts: newShifts,
-      vacations: preservedVacations
+      vacations: preservedVacations,
     })
   }
 
@@ -637,74 +591,12 @@ export default function Dashboard() {
         visibilitySettings={visibilitySettings}
         onScheduleTypeChange={handleScheduleTypeChange}
         currentScheduleType={scheduleType}
-          vacations={scheduleData?.vacations ?? []}
-         onVacationSave={(vacation) => {
-           setScheduleData(prev => {
-             if (!prev) return prev
-
-             const updatedShifts = new Map(prev.shifts)
-
-             const vacationDates = calculateVacationDaysWithHolidays(
-               vacation.startDate,
-               vacation.days
-             )
-
-             vacationDates.forEach((date: Date) => {
-               const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-
-               updatedShifts.set(dateStr, {
-                 date: dateStr,
-                 type: "off",
-                 hours: 0,
-                 minutes: 0,
-               })
-             })
-
-             return {
-               ...prev,
-               shifts: updatedShifts,
-               vacations: [...(prev.vacations ?? []), { ...vacation, isVisible: true }],
-             }
-           })
-         }}
-         onVacationDelete={(index) => {
-           console.log("DELETE IN PAGE", index)
-           handleVacationDelete(index)
-         }}
-           onToggleVacation={(index: number, isVisible: boolean) => {
-      setScheduleData(prev => {
-        if (!prev) return prev
-
-        const updatedVacations = [...(prev.vacations || [])]
-        updatedVacations[index] = { ...updatedVacations[index], isVisible }
-
-        const updatedShifts = new Map(prev.shifts)
-
-        ;(prev.vacations || []).forEach(vacation => {
-          if (vacation.isVisible !== false) {
-            const vacationDates = calculateVacationDaysWithHolidays(vacation.startDate, vacation.days)
-            vacationDates.forEach(date => {
-              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-              const shift = updatedShifts.get(dateStr)
-              if (shift?.type === "off") {
-                updatedShifts.delete(dateStr)
-              }
-            })
-          }
-        })
-
-        applyVisibleVacationsToSchedule(updatedShifts, updatedVacations)
-
-        return {
-          ...prev,
-          shifts: updatedShifts,
-          vacations: updatedVacations,
-        }
-      })
-    }}
-
-
-
+        vacations={scheduleData.vacations ?? []}
+        showWorkShiftsDuringVacation={scheduleData.showWorkShiftsDuringVacation === true}
+        onShowWorkShiftsDuringVacationChange={handleShowWorkShiftsDuringVacationChange}
+        onVacationSave={handleVacationSaveFromMenu}
+        onVacationDelete={handleVacationDelete}
+        onToggleVacation={handleToggleVacation}
       />
 
       <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-40">
@@ -755,20 +647,38 @@ export default function Dashboard() {
               onCurrentMonthChange={setCurrentMonth}
               scheduleType={scheduleType}
               schedule5DayType={schedule5DayType}
+              showWorkShiftsDuringVacation={scheduleData.showWorkShiftsDuringVacation === true}
               onVacationSave={(vacationDates) => {
                 const updatedShifts = new Map(scheduleData.shifts)
-                vacationDates.forEach(date => {
+                const showWork = scheduleData.showWorkShiftsDuringVacation === true
+                vacationDates.forEach((date) => {
                   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
-                  updatedShifts.set(dateStr, {
-                    date: dateStr,
-                    type: "off",
-                    hours: 0,
-                    minutes: 0,
-                  })
+                  if (showWork) {
+                    const existing = updatedShifts.get(dateStr)
+                    if (existing) {
+                      updatedShifts.set(dateStr, { ...existing, isOnVacation: true })
+                    } else {
+                      updatedShifts.set(dateStr, {
+                        date: dateStr,
+                        type: "off",
+                        hours: 0,
+                        minutes: 0,
+                        isOnVacation: true,
+                      })
+                    }
+                  } else {
+                    updatedShifts.set(dateStr, {
+                      date: dateStr,
+                      type: "off",
+                      hours: 0,
+                      minutes: 0,
+                      isOnVacation: true,
+                    })
+                  }
                 })
                 setScheduleData({
                   ...scheduleData,
-                  shifts: updatedShifts
+                  shifts: updatedShifts,
                 })
               }}
             />

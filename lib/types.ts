@@ -15,6 +15,8 @@ export interface Shift {
   notifications?: Notification[]
   isHoliday?: boolean
   holidayHours?: number
+  /** День попадает в период видимого отпуска */
+  isOnVacation?: boolean
 }
 
 export interface MonthlySettings {
@@ -42,6 +44,8 @@ export interface ScheduleData {
   globalSettings: GlobalSettings;
   globalNotes?: string;
   vacations?: { startDate: Date; days: number; isVisible: boolean | undefined }[];
+  /** Показывать рабочие смены в период отпуска (не заменять на off) */
+  showWorkShiftsDuringVacation?: boolean;
   teamShifts?: TeamShiftData[];
 }
 

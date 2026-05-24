@@ -19,6 +19,18 @@ export function isWorkDayBeforeHoliday(date: Date): boolean {
 
 export const SHIFT_PATTERN = ["day", "day", "off", "off", "night", "night2", "offn", "off"] as const
 
+/** Бригады для графика 2x2 (для валидации выбора). */
+export const VALID_TEAMS_2X2 = ["Бригада 1", "Бригада 2", "Бригада 3", "Бригада 4"] as const
+
+export const DEFAULT_TEAM_2X2 = "Бригада 4"
+
+/** Возвращает переданную бригаду, если она из VALID_TEAMS_2X2, иначе DEFAULT_TEAM_2X2. */
+export function getValidTeam(team: string): string {
+  return VALID_TEAMS_2X2.includes(team as (typeof VALID_TEAMS_2X2)[number])
+    ? team
+    : DEFAULT_TEAM_2X2
+}
+
 const TEAM_PATTERNS = {
   "Бригада 1": ["off", "off", "night", "night2", "offn", "off", "day", "day"],
   "Бригада 2": ["night", "night2", "offn", "off", "day", "day", "off", "off"],

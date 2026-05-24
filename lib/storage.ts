@@ -24,6 +24,7 @@ function serializeScheduleData(data: ScheduleData): any {
       days: v.days,
       isVisible: v.isVisible !== false,
     })) ?? [],
+    showWorkShiftsDuringVacation: data.showWorkShiftsDuringVacation === true,
     teamShifts: data.teamShifts?.map(team => ({
       teamId: team.teamId,
       shifts: Array.from(team.shifts.entries()),
@@ -90,6 +91,7 @@ function deserializeScheduleData(serialized: any): ScheduleData {
       }))
       .filter((v: any) => isValidDate(v.startDate))
   : [],
+    showWorkShiftsDuringVacation: serialized.showWorkShiftsDuringVacation === true,
     teamShifts,
   };
 }
