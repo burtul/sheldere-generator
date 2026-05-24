@@ -21,21 +21,28 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, onTogg
   const [error, setError] = useState<string | null>(null)
 
   const handleSave = () => {
-    // Валидируем данные перед сохранением
-    if (!startDate) {
+    const hasStartDate = startDate != null
+    const hasDays = days !== "" && !isNaN(Number(days)) && Number(days) > 0
+    const isAddingNewVacation = hasStartDate || hasDays
+
+    // Пустая форма — только закрыть (например, после переключения тумблеров)
+    if (!isAddingNewVacation) {
+      setError(null)
+      onClose()
+      return
+    }
+
+    if (!hasStartDate) {
       setError("Пожалуйста, выберите дату начала отпуска")
       return
     }
 
-    if (!days || isNaN(Number(days)) || Number(days) <= 0) {
+    if (!hasDays) {
       setError("Пожалуйста, введите корректное количество дней")
       return
     }
 
-    // Сохраняем отпуск только если все данные корректны
     onSave(startDate, Number(days))
-
-    // Сбрасываем форму и закрываем диалог
     setStartDate(null)
     setDays("")
     setError(null)
@@ -84,7 +91,7 @@ export default function VacationDialog({ open, onClose, onSave, onDelete, onTogg
                 error={!!error && (!days || isNaN(Number(days)) || Number(days) <= 0)}
                 helperText={error && (!days || isNaN(Number(days)) || Number(days) <= 0) ? error : undefined}
               />
-              {error && (!days || isNaN(Number(days)) || Number(days) <= 0) && (
+              {error && (
                 <Alert severity="error" sx={{ mt: 1, py: 0.5 }}>
                   <Typography variant="body2" color="error">
                     {error}
