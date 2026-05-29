@@ -1,11 +1,13 @@
 export type ShiftType = "day" | "night" | "night2" | "off" | "offn" | "weekday" | "weekday15" | "weekday7"
 
+/** Пользовательское напоминание, привязанное к конкретной смене. */
 export interface Notification {
   id: string
   time: string // HH:MM format
   message: string
 }
 
+/** Одна запись календаря: тип смены, часы, заметки и служебные признаки. */
 export interface Shift {
   date: string
   type: ShiftType
@@ -24,6 +26,7 @@ export interface MonthlySettings {
   targetHours: number
 }
 
+/** Глобальные настройки, влияющие на отображение и генерацию расписания. */
 export interface GlobalSettings {
   dayShiftColor: string
   nightShiftColor: string
@@ -37,6 +40,7 @@ export interface TeamShiftData {
   shifts: Map<string, Shift>;
 }
 
+/** Основная структура состояния расписания, которая сохраняется в localStorage. */
 export interface ScheduleData {
   startDate: Date;
   shifts: Map<string, Shift>;

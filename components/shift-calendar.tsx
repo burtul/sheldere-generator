@@ -59,6 +59,7 @@ export function ShiftCalendar({
   const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`
   const monthSettings = monthlySettings.get(monthKey)
 
+  // Плановые часы для пятидневки считаются по рабочим дням месяца с учётом праздников.
   const calculateDefaultTargetHours = () => {
     const date = new Date(`${year}-${String(month + 1).padStart(2, "0")}-01T00:00:00`);
     const lastDay = new Date(year, month + 1, 0);
@@ -164,6 +165,7 @@ export function ShiftCalendar({
   useEffect(() => {
     if (!selectedTeam) return
 
+    // При переходе на месяц без сгенерированных смен расширяем расписание вперёд.
     let needsExtension = false
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
@@ -280,6 +282,7 @@ export function ShiftCalendar({
   }
 
   const handleDateClick = (dateStr: string) => {
+    // Одинарный клик выбирает дату, двойной открывает редактор смены.
     if (clickTimeout) {
       clearTimeout(clickTimeout)
       setClickTimeout(null)

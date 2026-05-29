@@ -46,6 +46,8 @@ const TEAM_PATTERNS = {
 // Базовая дата загружается из настроек, если не задана — используется дата по умолчанию
 export const DEFAULT_PATTERN_BASE_DATE = new Date(2025, 0, 1) // 1 января 2025
 
+// Сдвиг внутри циклического паттерна считается от базовой даты.
+// Формула с двойным остатком корректно работает и для дат раньше базовой.
 function getPatternIndex(
   baseDate: Date,
   targetDate: Date,
@@ -124,6 +126,7 @@ export function generateSchedule(
     let hours = 0
     let minutes = 0
 
+    // Тип смены определяет количество часов, которое попадёт в месячные итоги.
     switch (shiftType) {
       case "day":
         hours = 12

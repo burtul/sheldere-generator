@@ -28,6 +28,7 @@ import {
 
 
 export default function Dashboard() {
+  // Главное состояние приложения: расписание, выбранная дата, модальные окна и пользовательские настройки.
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null)
   const [editingMonth, setEditingMonth] = useState<string | null>(null)
   const [editingGlobalSettings, setEditingGlobalSettings] = useState(false)
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const [scheduleType, setScheduleType] = useState<"2x2" | "5days">("2x2")
   const [schedule5DayType, setSchedule5DayType] = useState<"8hours" | "8-15">("8hours")
 
+  // Первичная инициализация: восстанавливаем localStorage или создаём расписание по умолчанию.
   useEffect(() => {
     const saved = loadScheduleData()
     if (saved) {
@@ -163,6 +165,7 @@ export default function Dashboard() {
   }, [schedule5DayType])
 
   const handleNotificationDelete = (date: string, notificationId: string) => {
+    // Удаляем напоминание только из выбранной даты, сохраняя остальные данные смены.
     const newShifts = new Map(scheduleData!.shifts)
     const shift = newShifts.get(date)
     if (shift && shift.notifications) {
@@ -179,6 +182,7 @@ export default function Dashboard() {
   }
 
   const handleNoteUpdate = (date: string, note: string) => {
+    // Заметку можно добавить даже на дату без смены: создаём пустую запись-заглушку.
     const newShifts = new Map(scheduleData!.shifts)
     const shift = newShifts.get(date)
     if (shift) {

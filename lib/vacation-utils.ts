@@ -1,12 +1,16 @@
 import { generateHolidaysForYear } from "./holidays"
 import type { Holiday } from "./types"
 
-// Проверка, является ли день праздничным
+// Проверяет дату по заранее переданному списку праздников.
 function isHoliday(date: Date, holidays: Holiday[]): boolean {
   const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
   return holidays.some(h => h.date === dateStr)
 }
 
+/**
+ * Возвращает все календарные даты отпуска.
+ * Праздничные нерабочие дни попадают в результат, но не уменьшают лимит vacationDays.
+ */
 export function calculateVacationDaysWithHolidays(
   startDate: Date,
   vacationDays: number
@@ -20,6 +24,7 @@ export function calculateVacationDaysWithHolidays(
   while (countedVacationDays < vacationDays) {
     const year = currentDate.getFullYear()
 
+    // Праздники кэшируются по году, чтобы не пересчитывать их на каждом дне отпуска.
     if (!holidaysCache[year]) {
       holidaysCache[year] = generateHolidaysForYear(year)
     }
@@ -34,10 +39,10 @@ export function calculateVacationDaysWithHolidays(
        )
      })
 
-    // ⬇️ ВСЕ дни в промежутке отпуска — off
+    // В календарь отпуска добавляются все дни промежутка, включая праздники.
     result.push(new Date(currentDate))
 
-    // ⬇️ СЧИТАЕМ ТОЛЬКО НЕПРАЗДНИЧНЫЕ
+    // Дни отпуска расходуются только на непраздничные даты.
     if (!isHoliday) {
       countedVacationDays++
     }

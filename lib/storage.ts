@@ -8,6 +8,10 @@ const TEAM_SHIFTS_STORAGE_KEY = (teamId: string) => {
   return `team_shifts_data_${teamId}`;
 };
 
+/**
+ * Готовит данные расписания к сохранению в localStorage.
+ * Map и Date нельзя безопасно сохранить напрямую, поэтому они переводятся в массивы и ISO-строки.
+ */
 function serializeScheduleData(data: ScheduleData): any {
   return {
     startDate: data.startDate.toISOString(),
@@ -32,9 +36,14 @@ function serializeScheduleData(data: ScheduleData): any {
   };
 }
 
+/**
+ * Восстанавливает данные из localStorage в рабочий формат приложения:
+ * массивы снова становятся Map, а даты — объектами Date.
+ */
 function deserializeScheduleData(serialized: any): ScheduleData {
   const shifts = new Map<string, Shift>();
   serialized.shifts.forEach(([dateKey, shift]: [string, any]) => {
+    // Старые сохранения могли не иметь hours/minutes, поэтому подставляем нули.
     const hours = (shift.hours !== undefined && !isNaN(shift.hours)) ? shift.hours : 0;
     const minutes = (shift.minutes !== undefined && !isNaN(shift.minutes)) ? shift.minutes : 0;
 
@@ -48,6 +57,7 @@ function deserializeScheduleData(serialized: any): ScheduleData {
   const teamShifts = serialized.teamShifts?.map((teamData: any) => {
     const teamShiftsMap = new Map<string, Shift>();
     teamData.shifts.forEach(([dateKey, shift]: [string, any]) => {
+      // Нормализуем числовые поля для смен конкретной бригады.
       const hours = (shift.hours !== undefined && !isNaN(shift.hours)) ? shift.hours : 0;
       const minutes = (shift.minutes !== undefined && !isNaN(shift.minutes)) ? shift.minutes : 0;
       
@@ -136,6 +146,7 @@ export function loadScheduleData(): ScheduleData | null {
       const parsed = JSON.parse(data);
       const shiftsMap = new Map<string, Shift>();
       parsed.forEach(([dateKey, shift]: [string, any]) => {
+        // Повторяем нормализацию, чтобы отдельные сохранения бригад читались так же, как основное расписание.
         const hours = (shift.hours !== undefined && !isNaN(shift.hours)) ? shift.hours : 0;
         const minutes = (shift.minutes !== undefined && !isNaN(shift.minutes)) ? shift.minutes : 0;
         shiftsMap.set(dateKey, {
