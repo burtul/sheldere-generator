@@ -392,7 +392,7 @@ export function ShiftCalendar({
                   : (shift?.type === "day") && "bg-[var(--day-color)] text-white shadow-sm",
                 (shift?.type === "night" || shift?.type === "offn" || shift?.type === "night2") && "bg-[var(--night-color)] text-white shadow-sm",
                 shift?.type === "off" && "bg-[var(--off-color)] text-white/90",
-                isWorkDuringVacation && "ring-2 ring-amber-400 ring-offset-1 ring-offset-background"
+                isOnVacation && "ring-2 ring-amber-400 ring-offset-1 ring-offset-background"
               )}
               style={getShiftStyle(day)}
             >
@@ -438,13 +438,6 @@ export function ShiftCalendar({
       {(showWorkShiftsDuringVacation || shifts.size > 0) &&
         Array.from(shifts.values()).some((s) => s.isOnVacation) && (
         <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block w-4 h-4 rounded border border-border"
-              style={{ backgroundColor: globalSettings.offShiftColor }}
-            />
-            <span>Отпуск (выходной)</span>
-          </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-4 h-4 rounded bg-primary/80 ring-2 ring-amber-400" />
             <span>Смена в отпуске</span>
