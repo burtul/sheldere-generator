@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ShiftCalendar } from "@/components/shift-calendar"
 import { MonthlySettingsModal } from "@/components/monthly-settings"
 import { ShiftEditor } from "@/components/shift-editor"
@@ -222,6 +222,47 @@ export default function Dashboard() {
     }
   }
 
+  const handleBurgerMenuClose = useCallback(() => {
+    setIsBurgerMenuClosing(true)
+    setTimeout(() => {
+      setIsBurgerMenuOpen(false)
+      setIsBurgerMenuClosing(false)
+    }, 300)
+  }, [])
+
+  useEffect(() => {
+    if (!isBurgerMenuOpen || isBurgerMenuClosing) return
+    if (typeof window === 'undefined' || !window.Capacitor) return
+
+    let removeBackButtonListener: (() => void) | undefined
+    let cancelled = false
+
+    const registerBackButtonListener = async () => {
+      try {
+        const { App } = await import('@capacitor/app')
+        const listener = await App.addListener('backButton', () => {
+          handleBurgerMenuClose()
+        })
+
+        if (cancelled) {
+          listener.remove()
+          return
+        }
+
+        removeBackButtonListener = () => listener.remove()
+      } catch (error) {
+        console.error('Failed to register Android back button listener:', error)
+      }
+    }
+
+    registerBackButtonListener()
+
+    return () => {
+      cancelled = true
+      removeBackButtonListener?.()
+    }
+  }, [handleBurgerMenuClose, isBurgerMenuClosing, isBurgerMenuOpen])
+
   if (loading || !scheduleData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -412,14 +453,6 @@ export default function Dashboard() {
   const getEditingShift = () => {
     if (!editingDate) return null
     return scheduleData!.shifts.get(editingDate) || null
-  }
-
-  const handleBurgerMenuClose = () => {
-    setIsBurgerMenuClosing(true)
-    setTimeout(() => {
-      setIsBurgerMenuOpen(false)
-      setIsBurgerMenuClosing(false)
-    }, 300)
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {

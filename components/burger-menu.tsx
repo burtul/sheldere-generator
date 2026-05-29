@@ -9,6 +9,11 @@ import { ThemeProvider, createTheme } from "@mui/material/styles"
 import VacationDialog from "./vacation-dialog"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 
+const drawerTransitionDuration = {
+  enter: 320,
+  exit: 260,
+}
+
 interface BurgerMenuProps {
   isOpen: boolean
   isClosing: boolean
@@ -215,17 +220,47 @@ export default function BurgerMenu({
     <ThemeProvider theme={theme}>
       <Drawer
         anchor="left"
-        open={isOpen}
+        open={isOpen && !isClosing}
         onClose={onClose}
+        transitionDuration={drawerTransitionDuration}
+        slotProps={{
+          transition: {
+            easing: {
+              enter: theme.transitions.easing.easeOut,
+              exit: theme.transitions.easing.sharp,
+            },
+          },
+          backdrop: {
+            sx: {
+              transition: theme.transitions.create('opacity', {
+                duration: drawerTransitionDuration.enter,
+                easing: theme.transitions.easing.easeOut,
+              }),
+            },
+          },
+        }}
         sx={{
           '& .MuiDrawer-paper': {
             width: 320,
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
+            willChange: 'transform',
           }
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            opacity: isClosing ? 0 : 1,
+            transform: isClosing ? 'translateX(-8px)' : 'translateX(0)',
+            transition: theme.transitions.create(['opacity', 'transform'], {
+              duration: isClosing ? 180 : 260,
+              easing: isClosing ? theme.transitions.easing.sharp : theme.transitions.easing.easeOut,
+            }),
+          }}
+        >
           {/* Header */}
           <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {activeSection === "main" ? (
