@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
 import { isValidDate, isDateStringValid } from "@/lib/utils"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
@@ -13,6 +13,9 @@ const drawerTransitionDuration = {
   enter: 320,
   exit: 260,
 }
+
+const swipeCloseThreshold = 70
+const swipeDirectionLockThreshold = 12
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -53,6 +56,7 @@ export default function BurgerMenu({
   onShowWorkShiftsDuringVacationChange,
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
   const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
   const [baseDate, setBaseDate] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -206,6 +210,42 @@ export default function BurgerMenu({
     setOpenClearDialog(false)
   }
 
+  const handleSwipeStart = (event: React.TouchEvent) => {
+    const touch = event.touches[0]
+    swipeStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  const handleSwipeMove = (event: React.TouchEvent) => {
+    const start = swipeStartRef.current
+    const touch = event.touches[0]
+    if (!start || !touch || isClosing) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    const isHorizontalLeftSwipe =
+      deltaX < -swipeDirectionLockThreshold && Math.abs(deltaX) > Math.abs(deltaY)
+
+    if (isHorizontalLeftSwipe) {
+      event.preventDefault()
+    }
+  }
+
+  const handleSwipeEnd = (event: React.TouchEvent) => {
+    const start = swipeStartRef.current
+    const touch = event.changedTouches[0]
+    swipeStartRef.current = null
+    if (!start || !touch || isClosing) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    const isCloseSwipe =
+      deltaX <= -swipeCloseThreshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.25
+
+    if (isCloseSwipe) {
+      onClose()
+    }
+  }
+
   if (!isOpen) return null
 
   const getColorsMenuText = () => {
@@ -224,6 +264,17 @@ export default function BurgerMenu({
         onClose={onClose}
         transitionDuration={drawerTransitionDuration}
         slotProps={{
+          root: {
+            onTouchStart: handleSwipeStart,
+            onTouchMove: handleSwipeMove,
+            onTouchEnd: handleSwipeEnd,
+            onTouchCancel: () => {
+              swipeStartRef.current = null
+            },
+            sx: {
+              touchAction: 'pan-y',
+            },
+          },
           transition: {
             easing: {
               enter: theme.transitions.easing.easeOut,
@@ -232,6 +283,7 @@ export default function BurgerMenu({
           },
           backdrop: {
             sx: {
+              touchAction: 'pan-y',
               transition: theme.transitions.create('opacity', {
                 duration: drawerTransitionDuration.enter,
                 easing: theme.transitions.easing.easeOut,
@@ -245,6 +297,7 @@ export default function BurgerMenu({
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
             willChange: 'transform',
+            touchAction: 'pan-y',
           }
         }}
       >
