@@ -57,6 +57,7 @@ export default function BurgerMenu({
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
+  const swipeIsBackdropRef = useRef(false)
   const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
   const [baseDate, setBaseDate] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -210,9 +211,10 @@ export default function BurgerMenu({
     setOpenClearDialog(false)
   }
 
-  const handleSwipeStart = (event: React.TouchEvent) => {
+  const handleSwipeStart = (event: React.TouchEvent, isBackdrop = false) => {
     const touch = event.touches[0]
     swipeStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+    swipeIsBackdropRef.current = isBackdrop
   }
 
   const handleSwipeMove = (event: React.TouchEvent) => {
@@ -222,10 +224,9 @@ export default function BurgerMenu({
 
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
-    const isHorizontalLeftSwipe =
-      deltaX < -swipeDirectionLockThreshold && Math.abs(deltaX) > Math.abs(deltaY)
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeDirectionLockThreshold
 
-    if (isHorizontalLeftSwipe) {
+    if (isHorizontalSwipe) {
       event.preventDefault()
     }
   }
@@ -233,15 +234,19 @@ export default function BurgerMenu({
   const handleSwipeEnd = (event: React.TouchEvent) => {
     const start = swipeStartRef.current
     const touch = event.changedTouches[0]
+    const isBackdrop = swipeIsBackdropRef.current
     swipeStartRef.current = null
+    swipeIsBackdropRef.current = false
     if (!start || !touch || isClosing) return
 
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
     const isCloseSwipe =
       deltaX <= -swipeCloseThreshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.25
+    const isBackGestureOnBackdrop =
+      isBackdrop && deltaX >= swipeCloseThreshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.25
 
-    if (isCloseSwipe) {
+    if (isCloseSwipe || isBackGestureOnBackdrop) {
       onClose()
     }
   }
@@ -270,6 +275,7 @@ export default function BurgerMenu({
             onTouchEnd: handleSwipeEnd,
             onTouchCancel: () => {
               swipeStartRef.current = null
+              swipeIsBackdropRef.current = false
             },
             sx: {
               touchAction: 'pan-y',
@@ -282,6 +288,13 @@ export default function BurgerMenu({
             },
           },
           backdrop: {
+            onTouchStart: (event: React.TouchEvent) => handleSwipeStart(event, true),
+            onTouchMove: handleSwipeMove,
+            onTouchEnd: handleSwipeEnd,
+            onTouchCancel: () => {
+              swipeStartRef.current = null
+              swipeIsBackdropRef.current = false
+            },
             sx: {
               touchAction: 'pan-y',
               transition: theme.transitions.create('opacity', {
@@ -291,9 +304,13 @@ export default function BurgerMenu({
             },
           },
         }}
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: 320,
+        PaperProps={{
+          sx: {
+            width: {
+              xs: 280,
+              sm: 320,
+            },
+            maxWidth: '100%',
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
             willChange: 'transform',

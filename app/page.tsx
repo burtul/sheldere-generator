@@ -223,15 +223,20 @@ export default function Dashboard() {
   }
 
   const handleBurgerMenuClose = useCallback(() => {
-    setIsBurgerMenuClosing(true)
-    setTimeout(() => {
-      setIsBurgerMenuOpen(false)
-      setIsBurgerMenuClosing(false)
-    }, 300)
+    setIsBurgerMenuClosing((closing) => {
+      if (closing) return closing
+
+      setTimeout(() => {
+        setIsBurgerMenuOpen(false)
+        setIsBurgerMenuClosing(false)
+      }, 300)
+
+      return true
+    })
   }, [])
 
   useEffect(() => {
-    if (!isBurgerMenuOpen || isBurgerMenuClosing) return
+    if (!isBurgerMenuOpen) return
     if (typeof window === 'undefined' || !window.Capacitor) return
 
     let removeBackButtonListener: (() => void) | undefined
@@ -261,7 +266,7 @@ export default function Dashboard() {
       cancelled = true
       removeBackButtonListener?.()
     }
-  }, [handleBurgerMenuClose, isBurgerMenuClosing, isBurgerMenuOpen])
+  }, [handleBurgerMenuClose, isBurgerMenuOpen])
 
   if (loading || !scheduleData) {
     return (
