@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${_geist.className} ${_geistMono.className}`}>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <AppToaster />
       </body>
