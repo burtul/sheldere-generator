@@ -6,15 +6,16 @@ let isChannelCreated = false
 export const ensureNotificationChannel = async () => {
   if (isChannelCreated) return
   try {
-    await LocalNotifications.createChannel({
-      id: 'reminders_channel',
-      name: 'Напоминания',
-      importance: 4,
-      visibility: 1,
-      sound: 'default',
-      lights: true,
-      vibration: true
-    })
+      await LocalNotifications.createChannel({
+        id: 'reminders_channel',
+        name: 'Напоминания',
+        importance: 4,
+        visibility: 1,
+        sound: 'file://android.resource://com.burt.app/raw/alarm',
+        lights: true,
+        vibration: true,
+        vibrate: [0, 1000, 500, 1000] // Дополнительная настройка вибрации
+      })
     isChannelCreated = true
   } catch (error) {
     console.error('Error creating notification channel:', error)
