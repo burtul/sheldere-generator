@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { AddNotificationDialog } from './add-notification-dialog';
 import { Bell, Trash2, Plus } from 'lucide-react';
+import { cancelNotification, scheduleLocalNotification } from '@/lib/notification-utils';
 
 interface ShiftEditorProps {
   date: string;
@@ -198,81 +199,91 @@ export function ShiftEditor({
     }
   };
 
-  // Обработка добавления нового уведомления
-  const handleAddNotification = (time: string, message: string) => {
-    if (!date || !scheduleData || !setScheduleData) return;
+// Обработка добавления нового уведомления
+   const handleAddNotification = (time: string, message: string) => {
+     if (!date || !scheduleData || !setScheduleData) return;
 
-    // Валидация данных
-    if (!time) {
-      alert('Пожалуйста, укажите время для уведомления');
-      return;
-    }
+     if (!time) {
+       alert('Пожалуйста, укажите время для уведомления');
+       return;
+     }
 
-    if (!message.trim()) {
-      alert('Пожалуйста, добавьте текст сообщения');
-      return;
-    }
+     if (!message.trim()) {
+       alert('Пожалуйста, добавьте текст сообщения');
+       return;
+     }
 
-    // Проверка формата времени (HH:mm)
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(time)) {
-      alert('Некорректный формат времени. Используйте формат ЧЧ:ММ');
-      return;
-    }
+     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+     if (!timeRegex.test(time)) {
+       alert('Некорректный формат времени. Используйте формат ЧЧ:ММ');
+       return;
+     }
 
-    const newNotification = {
-      id: Date.now().toString(),
-      time,
-      message: message.trim(),
-    };
+     const newNotification = {
+       id: Date.now().toString(),
+       time,
+       message: message.trim(),
+     };
 
-    // Обновляем локальное состояние смены
-    setShiftData(prev => ({
-      ...prev,
-      notifications: [...(prev.notifications || []), newNotification],
-    }));
+// Планируем уведомление
+      const [years, months, days] = date.split('-').map(Number)
+      const [hours, minutes] = time.split(':').map(Number)
+      const notificationDate = new Date(years, months - 1, days, hours, minutes, 0)
+      const now = new Date()
+      if (notificationDate > now) {
+        scheduleLocalNotification(newNotification.id, "Напоминание", newNotification.message, notificationDate).catch(console.error)
+      }
 
-    // Обновляем глобальное состояние
-    const newShifts = new Map(scheduleData.shifts);
-    const currentShift = newShifts.get(date);
-    if (currentShift) {
-      const updatedNotifications = (currentShift as any).notifications ? [...(currentShift as any).notifications, newNotification] : [newNotification];
-      newShifts.set(date, {
-        ...currentShift,
-        notifications: updatedNotifications,
-      });
-      setScheduleData({
-        ...scheduleData,
-        shifts: newShifts,
-      });
-    }
-  };
+     // Обновляем локальное состояние смены
+     setShiftData(prev => ({
+       ...prev,
+       notifications: [...(prev.notifications || []), newNotification],
+     }));
 
-  // Удаление уведомления
-  const handleRemoveNotification = (id: string) => {
-    if (!date || !scheduleData || !setScheduleData) return;
+     // Обновляем глобальное состояние
+     const newShifts = new Map(scheduleData.shifts);
+     const currentShift = newShifts.get(date);
+     if (currentShift) {
+       const updatedNotifications = (currentShift as any).notifications ? [...(currentShift as any).notifications, newNotification] : [newNotification];
+       newShifts.set(date, {
+         ...currentShift,
+         notifications: updatedNotifications,
+       });
+       setScheduleData({
+         ...scheduleData,
+         shifts: newShifts,
+       });
+     }
+   };
 
-    // Обновляем локальное состояние смены
-    setShiftData(prev => ({
-      ...prev,
-      notifications: (prev.notifications || []).filter(n => n.id !== id),
-    }));
+// Удаление уведомления
+   const handleRemoveNotification = (id: string) => {
+     if (!date || !scheduleData || !setScheduleData) return;
 
-    // Обновляем глобальное состояние
-    const newShifts = new Map(scheduleData.shifts);
-    const currentShift = newShifts.get(date);
-    if (currentShift) {
-      const updatedNotifications = (currentShift as any).notifications ? (currentShift as any).notifications.filter((n: any) => n.id !== id) : [];
-      newShifts.set(date, {
-        ...currentShift,
-        notifications: updatedNotifications,
-      });
-      setScheduleData({
-        ...scheduleData,
-        shifts: newShifts,
-      });
-    }
-  };
+     // Отменяем запланированное уведомление
+     cancelNotification(id).catch(err => console.error('Failed to cancel notification:', err))
+
+     // Обновляем локальное состояние смены
+     setShiftData(prev => ({
+       ...prev,
+       notifications: (prev.notifications || []).filter(n => n.id !== id),
+     }));
+
+     // Обновляем глобальное состояние
+     const newShifts = new Map(scheduleData.shifts);
+     const currentShift = newShifts.get(date);
+     if (currentShift) {
+       const updatedNotifications = (currentShift as any).notifications ? (currentShift as any).notifications.filter((n: any) => n.id !== id) : [];
+       newShifts.set(date, {
+         ...currentShift,
+         notifications: updatedNotifications,
+       });
+       setScheduleData({
+         ...scheduleData,
+         shifts: newShifts,
+       });
+     }
+   };
 
   const handleNoteClick = () => {
     setIsEditingNote(true);
@@ -401,19 +412,18 @@ export function ShiftEditor({
             </div>
           )}
 
-          {/* Кнопка для добавления нового уведомления */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full">
-                <Plus className="h-3.5 w-3.5 mr-2" />
-                Добавить уведомление
-              </Button>
-            </DialogTrigger>
-            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
-              <DialogTitle>Добавить уведомление</DialogTitle>
-              <AddNotificationDialog onAddNotification={handleAddNotification} />
-            </DialogContent>
-          </Dialog>
+{/* Кнопка для добавления нового уведомления */}
+           <Dialog>
+             <DialogTrigger asChild>
+               <Button variant="outline" size="sm" className="w-full">
+                 <Plus className="h-3.5 w-3.5 mr-2" />
+                 Добавить уведомление
+               </Button>
+             </DialogTrigger>
+             <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+               <AddNotificationDialog date={date} onAddNotification={handleAddNotification} />
+             </DialogContent>
+           </Dialog>
 
           {/* Блок заметки с возможностью редактирования */}
           <div className="bg-muted/50 rounded-lg p-3">

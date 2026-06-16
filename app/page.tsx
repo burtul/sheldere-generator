@@ -18,7 +18,7 @@ import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
-import { checkNotifications, scheduleNotification } from "@/lib/notification-utils"
+import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
 import {
   applyVisibleVacationsToSchedule,
   applyPreservedNotesAndVacations,
@@ -107,32 +107,14 @@ export default function Dashboard() {
     }
   }, [])
 
-  // Эффект для проверки уведомлений каждую минуту
-  useEffect(() => {
-    const checkAndScheduleNotifications = () => {
-      if (!scheduleData) return;
+// Эффект для планирования всех уведомлений из расписания
+   useEffect(() => {
+     if (scheduleData) {
+       scheduleAllNotificationsFromSchedule(scheduleData.shifts)
+     }
+   }, [scheduleData])
 
-      const now = new Date();
-      const notificationsToShow = checkNotifications(scheduleData.shifts, now);
-
-      notificationsToShow.forEach(notification => {
-        scheduleNotification(`Уведомление на ${notification.time}`, {
-          body: notification.message || 'У вас есть напоминание!',
-        });
-      });
-    };
-
-    // Проверяем уведомления сразу
-    checkAndScheduleNotifications();
-
-    // Устанавливаем интервал для проверки каждую минуту
-    const intervalId = setInterval(checkAndScheduleNotifications, 60000);
-
-    // Очищаем интервал при размонтировании компонента
-    return () => clearInterval(intervalId);
-  }, [scheduleData]);
-
-  useEffect(() => {
+   useEffect(() => {
     if (scheduleData) {
       saveScheduleData(scheduleData)
     }

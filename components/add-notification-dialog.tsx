@@ -4,41 +4,38 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Event } from "@mui/icons-material"
 import { Capacitor } from "@capacitor/core"
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { toast } from "sonner"
 
 interface AddNotificationDialogProps {
+  date: string
   onAddNotification: (time: string, message: string) => void
 }
 
-export function AddNotificationDialog({ onAddNotification }: AddNotificationDialogProps) {
+export function AddNotificationDialog({ date, onAddNotification }: AddNotificationDialogProps) {
   const [time, setTime] = useState("")
   const [message, setMessage] = useState("")
-  const [open, setOpen] = useState(true)
 
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [permissionDenied, setPermissionDenied] = useState(false)
 
   useEffect(() => {
-    // Запрашиваем разрешение на уведомления с явным указанием канала
     const requestPermission = async () => {
       setIsRequestingPermission(true)
       try {
-        // Создаём канал уведомлений (обязательно для Android 8+)
         await LocalNotifications.createChannel({
           id: 'reminders_channel',
           name: 'Напоминания',
-          importance: 4, // HIGH
-          visibility: 1,  // PUBLIC
+          importance: 4,
+          visibility: 1,
           sound: 'default',
           lights: true,
           vibration: true
         })
 
-        // Проверяем и запрашиваем разрешение
         const { display } = await LocalNotifications.checkPermissions()
         if (display === 'denied') {
           setPermissionDenied(true)
@@ -58,22 +55,31 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
       }
     }
 
-    requestPermission()
+    if (Capacitor.isNativePlatform()) {
+      requestPermission()
+    }
   }, [])
 
   const handleSubmit = async () => {
     if (!time || !message) return
     if (permissionDenied) {
-      alert('Разрешение на уведомления отклонено. Функция будет ограничена.')
+      onAddNotification(time, message)
+      toast.success("Уведомление сохранено")
       return
     }
 
     try {
-      // Планируем локальное уведомление
-      const notificationTime = new Date()
+      const [years, months, days] = date.split('-').map(Number)
       const [hours, minutes] = time.split(':').map(Number)
-
-      notificationTime.setHours(hours, minutes, 0)
+      
+      const notificationTime = new Date(years, months - 1, days, hours, minutes, 0)
+      
+      const now = new Date()
+      if (notificationTime <= now) {
+        const tomorrow = new Date(notificationTime)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        notificationTime.setTime(tomorrow.getTime())
+      }
 
       await LocalNotifications.schedule({
         notifications: [
@@ -92,7 +98,6 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
 
       onAddNotification(time, message)
       toast.success("Уведомление сохранено")
-      setOpen(false)
     } catch (error) {
       console.error('Error scheduling notification:', error)
       alert("Ошибка при добавлении уведомления")
@@ -100,7 +105,7 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
   }
 
   return (
-    <DialogContent>
+    <>
       <DialogHeader>
         <DialogTitle>Добавить уведомление</DialogTitle>
       </DialogHeader>
@@ -139,6 +144,6 @@ export function AddNotificationDialog({ onAddNotification }: AddNotificationDial
           Сохранить уведомление
         </Button>
       </div>
-    </DialogContent>
+    </>
   )
 }

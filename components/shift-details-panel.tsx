@@ -10,6 +10,7 @@ import { AddNotificationDialog } from "./add-notification-dialog"
 import type { Shift } from "@/lib/types"
 import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
 import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
+import { cancelNotification, scheduleLocalNotification } from '@/lib/notification-utils';
 
  interface ShiftDetailsPanelProps {
   shift: Shift | null
@@ -102,32 +103,41 @@ import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
       setIsEditingNote(false)
     }
 
-    // Обработка добавления нового уведомления
-    const handleAddNotification = (time: string, message: string) => {
-      if (!date || !scheduleData || !setScheduleData) return;
+// Обработка добавления нового уведомления
+     const handleAddNotification = (time: string, message: string) => {
+       if (!date || !scheduleData || !setScheduleData) return;
 
-      const newNotification = {
-        id: Date.now().toString(),
-        time,
-        message,
-      };
+       const newNotification = {
+         id: Date.now().toString(),
+         time,
+         message,
+       };
 
-      const newShifts = new Map(scheduleData.shifts);
-      const shift = newShifts.get(date);
+       // Планируем уведомление
+       const [years, months, days] = date.split('-').map(Number)
+       const [hours, minutes] = time.split(':').map(Number)
+       const notificationDate = new Date(years, months - 1, days, hours, minutes, 0)
+       const now = new Date()
+       if (notificationDate > now) {
+         scheduleLocalNotification(newNotification.id, "Напоминание", newNotification.message, notificationDate).catch(console.error)
+       }
 
-      if (shift) {
-        const updatedNotifications = (shift as any).notifications ? [...(shift as any).notifications, newNotification] : [newNotification];
-        newShifts.set(date, {
-          ...shift,
-          notifications: updatedNotifications,
-        });
+       const newShifts = new Map(scheduleData.shifts);
+       const shift = newShifts.get(date);
 
-        setScheduleData({
-          ...scheduleData,
-          shifts: newShifts,
-        });
-      }
-    };
+       if (shift) {
+         const updatedNotifications = (shift as any).notifications ? [...(shift as any).notifications, newNotification] : [newNotification];
+         newShifts.set(date, {
+           ...shift,
+           notifications: updatedNotifications,
+         });
+
+         setScheduleData({
+           ...scheduleData,
+           shifts: newShifts,
+         });
+       }
+     };
 
    const handleKeyDown = (e: React.KeyboardEvent) => {
      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -137,12 +147,13 @@ import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
      }
    }
 
-   // Функция удаления уведомления (как в ShiftEditor)
-   const handleRemoveNotification = (id: string) => {
-     if (date && onNotificationDelete) {
-       onNotificationDelete(date, id)
+// Функция удаления уведомления (как в ShiftEditor)
+     const handleRemoveNotification = (id: string) => {
+       cancelNotification(id).catch(err => console.error('Failed to cancel notification:', err))
+       if (date && onNotificationDelete) {
+         onNotificationDelete(date, id)
+       }
      }
-   }
 
     // Функция удаления заметки
     const handleRemoveNote = () => {
@@ -263,16 +274,21 @@ import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
               </div>
             )}
             
-            {/* Кнопка для добавления нового уведомления */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Plus className="h-3.5 w-3.5 mr-2" />
-                  Добавить уведомление
-                </Button>
-              </DialogTrigger>
-              <AddNotificationDialog onAddNotification={handleAddNotification} />
-            </Dialog>
+{/* Кнопка для добавления нового уведомления */}
+             {date && (
+               <Dialog>
+                 <DialogTrigger asChild>
+                   <Button variant="outline" size="sm" className="w-full">
+                     <Plus className="h-3.5 w-3.5 mr-2" />
+                     Добавить уведомление
+                   </Button>
+                 </DialogTrigger>
+                 <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+                   <DialogTitle>Добавить уведомление</DialogTitle>
+                   <AddNotificationDialog date={date} onAddNotification={handleAddNotification} />
+                 </DialogContent>
+               </Dialog>
+             )}
 
            {/* Блок заметки с возможностью редактирования по клику */}
            <div className="bg-muted/50 rounded-lg p-3">
