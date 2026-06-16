@@ -1,0 +1,221 @@
+Описание файлов папки components
+
+Основные компоненты
+==================
+
+components/burger-menu.tsx
+Главное боковое меню приложения. Открывает разделы настроек, смен, отпусков, заметок, темы и сброса данных.
+
+components/shift-calendar.tsx
+Календарь смен на месяц: отображает смены, праздники, отпуска, навигацию по месяцам и выделение текущей даты.
+
+components/vacation-dialog.tsx
+Диалог управления отпусками: добавление, удаление, скрытие/показ отпусков и отображение рабочих смен во время отпуска.
+
+components/app-toaster.tsx
+Глобальный контейнер уведомлений через sonner.
+
+components/add-notification-dialog.tsx
+Диалог создания локального уведомления на выбранную дату и время через Capacitor Local Notifications.
+
+components/schedule-generator.tsx
+Инструмент генерации расписания по стартовой дате, типу графика и количеству лет.
+
+components/team-selector.tsx
+Селектор команды/бригады для разных типов графиков.
+
+components/month-summary.tsx
+Блок статистики месяца: часы, норма, отклонение, праздничные часы и аванс.
+
+components/monthly-settings.tsx
+Диалог настройки часов конкретного месяца: ручной план или авторасчёт по праздникам.
+
+components/global-settings.tsx
+Общие настройки приложения: цвета смен, оклад и генератор расписания.
+
+components/shift-details-panel.tsx
+Панель деталей выбранной смены: тип смены, часы, заметка, уведомления, редактирование и удаление.
+
+components/shift-editor.tsx
+Модальное окно редактирования или создания смены.
+
+components/global-notes-modal.tsx
+Диалог глобальных заметок/списка дел с добавлением, редактированием, удалением и перемещением пунктов.
+
+components/theme-provider.tsx
+Обёртка над next-themes для переключения светлой/тёмной темы.
+
+components/offline-indicator.tsx
+Индикатор offline-режима при потере сетевого подключения.
+
+
+UI-компоненты
+=============
+
+components/ui/button.tsx
+Базовая кнопка с вариантами стилей и размеров.
+
+components/ui/dialog.tsx
+Модальные диалоги на Radix Dialog.
+
+components/ui/card.tsx
+Карточки и их части: header, footer, title, content.
+
+components/ui/drawer.tsx
+Выдвижная панель на Vaul.
+
+components/ui/calendar.tsx
+Календарь на react-day-picker.
+
+components/ui/chart.tsx
+Обёртки для графиков Recharts.
+
+components/ui/sidebar.tsx
+Боковая панель с адаптивностью, коллапсом и меню.
+
+components/ui/form.tsx
+Интеграция форм с React Hook Form.
+
+components/ui/toast.tsx
+Radix Toast-компоненты.
+
+components/ui/sonner.tsx
+Sonner Toaster с поддержкой темы.
+
+components/ui/use-toast.ts
+Хук состояния для тостов.
+
+components/ui/input.tsx
+Стилизованный текстовый input.
+
+components/ui/textarea.tsx
+Стилизованный textarea.
+
+components/ui/label.tsx
+Обёртка над Radix Label.
+
+components/ui/select.tsx
+Radix Select.
+
+components/ui/spinner.tsx
+Анимированный спиннер.
+
+components/ui/empty.tsx
+Компоненты пустого состояния.
+
+components/ui/use-mobile.tsx
+Хук определения мобильного экрана.
+
+components/ui/field.tsx
+Расширенные компоненты для форм.
+
+components/ui/input-group.tsx
+Группы input с аддонами и кнопками.
+
+components/ui/checkbox.tsx
+Radix Checkbox.
+
+components/ui/switch.tsx
+Radix Switch.
+
+components/ui/badge.tsx
+Бейджи с разными стилями.
+
+components/ui/tabs.tsx
+Radix Tabs.
+
+components/ui/tooltip.tsx
+Radix Tooltip.
+
+components/ui/popover.tsx
+Radix Popover.
+
+components/ui/input-otp.tsx
+Поле ввода OTP-кода.
+
+components/ui/accordion.tsx
+Radix Accordion.
+
+components/ui/alert.tsx
+Блоки alert с заголовком и описанием.
+
+components/ui/alert-dialog.tsx
+Подтверждающие диалоги с Cancel/Action.
+
+components/ui/aspect-ratio.tsx
+Обёртка для сохранения пропорций контента.
+
+components/ui/avatar.tsx
+Аватар с fallback-изображением.
+
+components/ui/breadcrumb.tsx
+Хлебные крошки навигации.
+
+components/ui/button-group.tsx
+Группа кнопок.
+
+components/ui/carousel.tsx
+Карусель на embla-carousel-react.
+
+components/ui/collapsible.tsx
+Radix Collapsible.
+
+components/ui/command.tsx
+Командная палитра на cmdk.
+
+components/ui/context-menu.tsx
+Radix ContextMenu.
+
+components/ui/dropdown-menu.tsx
+Radix DropdownMenu.
+
+components/ui/hover-card.tsx
+Radix HoverCard.
+
+components/ui/kbd.tsx
+Визуализация клавиатурных сочетаний.
+
+components/ui/menubar.tsx
+Radix Menubar.
+
+components/ui/navigation-menu.tsx
+Radix NavigationMenu.
+
+components/ui/pagination.tsx
+Компоненты пагинации.
+
+components/ui/progress.tsx
+Radix Progress bar.
+
+components/ui/radio-group.tsx
+Radix RadioGroup.
+
+components/ui/resizable.tsx
+Изменяемые панели через react-resizable-panels.
+
+components/ui/scroll-area.tsx
+Кастомная область прокрутки.
+
+components/ui/separator.tsx
+Горизонтальный или вертикальный разделитель.
+
+components/ui/sheet.tsx
+Боковая/верхняя/нижняя sheet-панель на Radix Dialog.
+
+components/ui/skeleton.tsx
+Skeleton-заполнитель загрузки.
+
+components/ui/slider.tsx
+Radix Slider.
+
+components/ui/table.tsx
+Таблица и её части.
+
+components/ui/toggle-group.tsx
+Группа Radix Toggle-кнопок.
+
+components/ui/toggle.tsx
+Radix Toggle-кнопка.
+
+components/ui/item.tsx
+Универсальные элементы списка/карточки.
