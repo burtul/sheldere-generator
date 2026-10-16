@@ -297,10 +297,10 @@ export default function Dashboard() {
     })
   }
 
-  const handleVacationSaveFromMenu = (vacation: { startDate: Date; days: number }) => {
+  const handleVacationSaveFromMenu = (vacation: { startDate: Date; days: number; name?: string }) => {
     setScheduleData((prev) => {
       if (!prev) return prev
-      const updatedVacations = [...(prev.vacations ?? []), { ...vacation, isVisible: true }]
+      const updatedVacations = [...(prev.vacations ?? []), { ...vacation, name: vacation.name?.trim() || "", isVisible: true }]
       const updatedShifts = new Map(prev.shifts)
       const next = { ...prev, vacations: updatedVacations }
       reapplyAllVacations(updatedShifts, next, {
@@ -313,7 +313,7 @@ export default function Dashboard() {
     })
   }
 
-  const handleVacationEdit = (index: number, vacation: { startDate: Date; days: number }) => {
+  const handleVacationEdit = (index: number, vacation: { startDate: Date; days: number; name?: string }) => {
     setScheduleData((prev) => {
       if (!prev?.vacations || !prev.vacations[index]) return prev
 
@@ -322,6 +322,7 @@ export default function Dashboard() {
         ...updatedVacations[index],
         startDate: vacation.startDate,
         days: vacation.days,
+        name: vacation.name?.trim() || "",
       }
 
       const updatedShifts = new Map(prev.shifts)
