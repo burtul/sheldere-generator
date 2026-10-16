@@ -10,7 +10,7 @@ import { AddNotificationDialog } from "./add-notification-dialog"
 import type { Shift } from "@/lib/types"
 import { Bell, Trash2, AlertCircle, Plus } from "lucide-react"
 import { loadTeamShifts, saveTeamShifts } from '@/lib/storage';
-import { cancelNotification, scheduleLocalNotification } from '@/lib/notification-utils';
+import { cancelNotification } from '@/lib/notification-utils';
 
  interface ShiftDetailsPanelProps {
   shift: Shift | null
@@ -113,30 +113,31 @@ import { cancelNotification, scheduleLocalNotification } from '@/lib/notificatio
          message,
        };
 
-       // Планируем уведомление
-       const [years, months, days] = date.split('-').map(Number)
-       const [hours, minutes] = time.split(':').map(Number)
-       const notificationDate = new Date(years, months - 1, days, hours, minutes, 0)
-       const now = new Date()
-       if (notificationDate > now) {
-         scheduleLocalNotification(newNotification.id, "Напоминание", newNotification.message, notificationDate).catch(console.error)
-       }
+       // Не планируем системное уведомление здесь.
+       // После сохранения расписания его синхронизирует scheduleAllNotificationsFromSchedule
+       // из app/page.tsx. Это исключает двойное планирование одного напоминания.
 
        const newShifts = new Map(scheduleData.shifts);
        const shift = newShifts.get(date);
 
-       if (shift) {
-         const updatedNotifications = (shift as any).notifications ? [...(shift as any).notifications, newNotification] : [newNotification];
-         newShifts.set(date, {
-           ...shift,
-           notifications: updatedNotifications,
-         });
+       const updatedNotifications = [
+         ...((shift as any)?.notifications ?? []),
+         newNotification,
+       ];
+       newShifts.set(date, {
+         ...(shift ?? {
+           date,
+           type: "off",
+           hours: 0,
+           minutes: 0,
+         }),
+         notifications: updatedNotifications,
+       });
 
-         setScheduleData({
-           ...scheduleData,
-           shifts: newShifts,
-         });
-       }
+       setScheduleData({
+         ...scheduleData,
+         shifts: newShifts,
+       });
      };
 
    const handleKeyDown = (e: React.KeyboardEvent) => {
