@@ -124,6 +124,13 @@ export default function VacationDialog({
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+               <TextField
+  label="Название отпуска"
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+  fullWidth
+  inputProps={{ maxLength: 60 }}
+/>
               <DatePicker
                 label="Дата начала отпуска"
                 value={startDate}
