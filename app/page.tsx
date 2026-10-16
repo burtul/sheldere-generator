@@ -313,6 +313,30 @@ export default function Dashboard() {
     })
   }
 
+  const handleVacationEdit = (index: number, vacation: { startDate: Date; days: number }) => {
+    setScheduleData((prev) => {
+      if (!prev?.vacations || !prev.vacations[index]) return prev
+
+      const updatedVacations = [...prev.vacations]
+      updatedVacations[index] = {
+        ...updatedVacations[index],
+        startDate: vacation.startDate,
+        days: vacation.days,
+      }
+
+      const updatedShifts = new Map(prev.shifts)
+      const next = { ...prev, vacations: updatedVacations }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+
+      return { ...next, shifts: updatedShifts }
+    })
+  }
+
   const handleToggleVacation = (index: number, isVisible: boolean) => {
     setScheduleData((prev) => {
       if (!prev) return prev
@@ -619,6 +643,7 @@ export default function Dashboard() {
         showWorkShiftsDuringVacation={scheduleData.showWorkShiftsDuringVacation === true}
         onShowWorkShiftsDuringVacationChange={handleShowWorkShiftsDuringVacationChange}
         onVacationSave={handleVacationSaveFromMenu}
+        onVacationEdit={handleVacationEdit}
         onVacationDelete={handleVacationDelete}
         onToggleVacation={handleToggleVacation}
       />
