@@ -9,11 +9,11 @@ import { Delete as DeleteIcon, Close as CloseIcon, Edit as EditIcon } from "@mui
 interface VacationDialogProps {
   open: boolean
   onClose: () => void
-  onSave: (startDate: Date, days: number) => void
+  onSave: (startDate: Date, days: number, name: string) => void
   onDelete: (index: number) => void
-  onEdit?: (index: number, startDate: Date, days: number) => void
+  onEdit?: (index: number, startDate: Date, days: number, name: string) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
-  vacations: Array<{ startDate: Date, days: number, isVisible?: boolean }>
+  vacations: Array<{ startDate: Date, days: number, name?: string, isVisible?: boolean }>
   showWorkShiftsDuringVacation?: boolean
   onShowWorkShiftsDuringVacationChange?: (value: boolean) => void
 }
@@ -37,7 +37,6 @@ export default function VacationDialog({
 
   const handleSave = () => {
     const hasStartDate = startDate != null
-    const [name, setName] = useState<string>("")
     const hasDays = days !== "" && !isNaN(Number(days)) && Number(days) > 0
     const isAddingNewVacation = hasStartDate || hasDays
 
@@ -59,12 +58,13 @@ export default function VacationDialog({
     }
 
     if (editingIndex !== null && onEdit) {
-      onEdit(editingIndex, startDate, Number(days))
+      onEdit(editingIndex, startDate, Number(days), name.trim())
     } else {
-      onSave(startDate, Number(days))
+      onSave(startDate, Number(days), name.trim())
     }
     setStartDate(null)
     setDays("")
+    setName("")
     setEditingIndex(null)
     setError(null)
     onClose()
@@ -73,6 +73,7 @@ export default function VacationDialog({
   const handleClose = () => {
     setStartDate(null)
     setDays("")
+    setName("")
     setEditingIndex(null)
     setError(null)
     onClose()
@@ -84,6 +85,7 @@ export default function VacationDialog({
     setEditingIndex(index)
     setStartDate(new Date(vacation.startDate))
     setDays(String(vacation.days))
+    setName(vacation.name || "")
     setError(null)
   }
 
@@ -124,13 +126,13 @@ export default function VacationDialog({
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-               <TextField
-  label="Название отпуска"
-  value={name}
-  onChange={(e) => setName(e.target.value)}
-  fullWidth
-  inputProps={{ maxLength: 60 }}
-/>
+              <TextField
+                label="Название отпуска"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                fullWidth
+                inputProps={{ maxLength: 60 }}
+              />
               <DatePicker
                 label="Дата начала отпуска"
                 value={startDate}
@@ -197,6 +199,9 @@ export default function VacationDialog({
                               title="Показывать отпуск на графике"
                            />
                          <Box>
+                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                             {vacation.name?.trim() || "Отпуск"}
+                           </Typography>
                            <Typography variant="body2">
                              <strong>Начало:</strong> {vacation.startDate.toLocaleDateString("ru-RU")}
                            </Typography>
