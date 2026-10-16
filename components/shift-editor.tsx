@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog';
 import { AddNotificationDialog } from './add-notification-dialog';
 import { Bell, Trash2, Plus } from 'lucide-react';
-import { cancelNotification, scheduleLocalNotification } from '@/lib/notification-utils';
+import { cancelNotification, scheduleNotification } from '@/lib/notification-utils';
 
 interface ShiftEditorProps {
   date: string;
@@ -231,7 +231,7 @@ export function ShiftEditor({
       const notificationDate = new Date(years, months - 1, days, hours, minutes, 0)
       const now = new Date()
       if (notificationDate > now) {
-        scheduleLocalNotification(newNotification.id, "Напоминание", newNotification.message, notificationDate).catch(console.error)
+        scheduleNotification("Напоминание", newNotification.message, newNotification.id, notificationDate).catch(console.error)
       }
 
      // Обновляем локальное состояние смены

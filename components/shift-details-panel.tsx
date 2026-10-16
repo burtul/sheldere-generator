@@ -362,7 +362,7 @@ import { cancelNotification } from '@/lib/notification-utils';
                        onClick={() => setShowDeleteAlert(false)}
                        className="flex-1"
                      >
-                       Отмена
+                       О��мена
                      </Button>
                      <Button
                        variant="destructive"
