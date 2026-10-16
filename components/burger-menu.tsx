@@ -31,6 +31,7 @@ interface BurgerMenuProps {
   currentScheduleType?: "2x2" | "5days"
   vacations?: { startDate: Date; days: number; isVisible?: boolean }[]
   onVacationSave?: (vacation: { startDate: Date; days: number }) => void
+  onVacationEdit?: (index: number, vacation: { startDate: Date; days: number }) => void
   onVacationDelete?: (index: number) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
   showWorkShiftsDuringVacation?: boolean
@@ -49,6 +50,7 @@ export default function BurgerMenu({
   onScheduleTypeChange,
   currentScheduleType = "2x2",
   onVacationSave,
+  onVacationEdit,
   onVacationDelete,
   onToggleVacation,
   vacations = [],
@@ -772,6 +774,9 @@ export default function BurgerMenu({
             if (onVacationSave) {
               onVacationSave({ startDate, days })
             }
+          }}
+          onEdit={(index, startDate, days) => {
+            onVacationEdit?.(index, { startDate, days })
           }}
           onDelete={(index) => {
             if (onVacationDelete) {

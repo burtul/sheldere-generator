@@ -4,13 +4,14 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { ru } from "date-fns/locale"
-import { Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material"
+import { Delete as DeleteIcon, Close as CloseIcon, Edit as EditIcon } from "@mui/icons-material"
 
 interface VacationDialogProps {
   open: boolean
   onClose: () => void
   onSave: (startDate: Date, days: number) => void
   onDelete: (index: number) => void
+  onEdit?: (index: number, startDate: Date, days: number) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
   vacations: Array<{ startDate: Date, days: number, isVisible?: boolean }>
   showWorkShiftsDuringVacation?: boolean
@@ -22,6 +23,7 @@ export default function VacationDialog({
   onClose,
   onSave,
   onDelete,
+  onEdit,
   onToggleVacation,
   vacations = [],
   showWorkShiftsDuringVacation = false,
@@ -29,6 +31,7 @@ export default function VacationDialog({
 }: VacationDialogProps) {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [days, setDays] = useState<string>("")
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleSave = () => {
@@ -53,9 +56,14 @@ export default function VacationDialog({
       return
     }
 
-    onSave(startDate, Number(days))
+    if (editingIndex !== null && onEdit) {
+      onEdit(editingIndex, startDate, Number(days))
+    } else {
+      onSave(startDate, Number(days))
+    }
     setStartDate(null)
     setDays("")
+    setEditingIndex(null)
     setError(null)
     onClose()
   }
@@ -63,8 +71,18 @@ export default function VacationDialog({
   const handleClose = () => {
     setStartDate(null)
     setDays("")
+    setEditingIndex(null)
     setError(null)
     onClose()
+  }
+
+  const handleEdit = (index: number) => {
+    const vacation = vacations[index]
+    if (!vacation) return
+    setEditingIndex(index)
+    setStartDate(new Date(vacation.startDate))
+    setDays(String(vacation.days))
+    setError(null)
   }
 
   return (
@@ -178,15 +196,61 @@ export default function VacationDialog({
                            </Typography>
                          </Box>
                        </Box>
-                       <IconButton
-                         color="error"
-                         size="small"
-                         onClick={() => onDelete(index)}
-                         sx={{ minWidth: 'auto' }}
-                         aria-label="Удалить отпуск"
-                       >
-                         <DeleteIcon fontSize="small" />
-                       </IconButton>
+                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+
+                         <IconButton
+
+                           color="primary"
+
+                           size="small"
+
+                           onClick={() => handleEdit(index)}
+
+                           sx={{ minWidth: 'auto' }}
+
+                           aria-label="Редактировать отпуск"
+
+                         >
+
+                           <EditIcon fontSize="small" />
+
+                         </IconButton>
+
+                         <IconButton
+
+                           color="error"
+
+                           size="small"
+
+                           onClick={() => {
+
+                             if (editingIndex === index) {
+
+                               setEditingIndex(null)
+
+                               setStartDate(null)
+
+                               setDays("")
+
+                               setError(null)
+
+                             }
+
+                             onDelete(index)
+
+                           }}
+
+                           sx={{ minWidth: 'auto' }}
+
+                           aria-label="Удалить отпуск"
+
+                         >
+
+                           <DeleteIcon fontSize="small" />
+
+                         </IconButton>
+
+                       </Box>
                      </Box>
                   ))}
                 </Box>
@@ -200,7 +264,7 @@ export default function VacationDialog({
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} color="secondary">Отмена</Button>
-          <Button onClick={handleSave} color="primary" variant="contained">Сохранить</Button>
+          <Button onClick={handleSave} color="primary" variant="contained">{editingIndex !== null ? "Сохранить изменения" : "Сохранить"}</Button>
         </DialogActions>
       </Dialog>
     </LocalizationProvider>
