@@ -36,6 +36,7 @@ export default function VacationDialog({
 
   const handleSave = () => {
     const hasStartDate = startDate != null
+    const [name, setName] = useState<string>("")
     const hasDays = days !== "" && !isNaN(Number(days)) && Number(days) > 0
     const isAddingNewVacation = hasStartDate || hasDays
 
