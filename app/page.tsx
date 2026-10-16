@@ -297,10 +297,10 @@ export default function Dashboard() {
     })
   }
 
-  const handleVacationSaveFromMenu = (vacation: { startDate: Date; days: number }) => {
+  const handleVacationSaveFromMenu = (vacation: { startDate: Date; days: number; name?: string }) => {
     setScheduleData((prev) => {
       if (!prev) return prev
-      const updatedVacations = [...(prev.vacations ?? []), { ...vacation, isVisible: true }]
+      const updatedVacations = [...(prev.vacations ?? []), { ...vacation, name: vacation.name?.trim() || "", isVisible: true }]
       const updatedShifts = new Map(prev.shifts)
       const next = { ...prev, vacations: updatedVacations }
       reapplyAllVacations(updatedShifts, next, {
@@ -309,6 +309,31 @@ export default function Dashboard() {
         selectedTeam,
         startDate: prev.startDate,
       })
+      return { ...next, shifts: updatedShifts }
+    })
+  }
+
+  const handleVacationEdit = (index: number, vacation: { startDate: Date; days: number; name?: string }) => {
+    setScheduleData((prev) => {
+      if (!prev?.vacations || !prev.vacations[index]) return prev
+
+      const updatedVacations = [...prev.vacations]
+      updatedVacations[index] = {
+        ...updatedVacations[index],
+        startDate: vacation.startDate,
+        days: vacation.days,
+        name: vacation.name?.trim() || "",
+      }
+
+      const updatedShifts = new Map(prev.shifts)
+      const next = { ...prev, vacations: updatedVacations }
+      reapplyAllVacations(updatedShifts, next, {
+        scheduleType,
+        schedule5DayType,
+        selectedTeam,
+        startDate: prev.startDate,
+      })
+
       return { ...next, shifts: updatedShifts }
     })
   }
@@ -619,6 +644,7 @@ export default function Dashboard() {
         showWorkShiftsDuringVacation={scheduleData.showWorkShiftsDuringVacation === true}
         onShowWorkShiftsDuringVacationChange={handleShowWorkShiftsDuringVacationChange}
         onVacationSave={handleVacationSaveFromMenu}
+        onVacationEdit={handleVacationEdit}
         onVacationDelete={handleVacationDelete}
         onToggleVacation={handleToggleVacation}
       />
