@@ -29,8 +29,9 @@ interface BurgerMenuProps {
   visibilitySettings?: { showShiftInfo: boolean; showMonthProgress: boolean; showTodoList: boolean }
   onScheduleTypeChange?: (scheduleType: "2x2" | "5days") => void
   currentScheduleType?: "2x2" | "5days"
-  vacations?: { startDate: Date; days: number; isVisible?: boolean }[]
-  onVacationSave?: (vacation: { startDate: Date; days: number }) => void
+  vacations?: { startDate: Date; days: number; name?: string; isVisible?: boolean }[]
+  onVacationSave?: (vacation: { startDate: Date; days: number; name?: string }) => void
+  onVacationEdit?: (index: number, vacation: { startDate: Date; days: number; name?: string }) => void
   onVacationDelete?: (index: number) => void
   onToggleVacation?: (index: number, isVisible: boolean) => void
   showWorkShiftsDuringVacation?: boolean
@@ -49,6 +50,7 @@ export default function BurgerMenu({
   onScheduleTypeChange,
   currentScheduleType = "2x2",
   onVacationSave,
+  onVacationEdit,
   onVacationDelete,
   onToggleVacation,
   vacations = [],
@@ -768,10 +770,13 @@ export default function BurgerMenu({
                <VacationDialog
           open={openVacationDialog}
           onClose={() => setOpenVacationDialog(false)}
-          onSave={(startDate, days) => {
+          onSave={(startDate, days, name) => {
             if (onVacationSave) {
-              onVacationSave({ startDate, days })
+              onVacationSave({ startDate, days, name })
             }
+          }}
+          onEdit={(index, startDate, days, name) => {
+            onVacationEdit?.(index, { startDate, days, name })
           }}
           onDelete={(index) => {
             if (onVacationDelete) {
