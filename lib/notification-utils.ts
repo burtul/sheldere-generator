@@ -1,148 +1,161 @@
 import type { Shift } from "./types"
-import { LocalNotifications } from '@capacitor/local-notifications'
+import { Capacitor } from "@capacitor/core"
+import { LocalNotifications, type LocalNotificationSchema } from "@capacitor/local-notifications"
 
-let isChannelCreated = false
+// Новый ID канала нужен потому, что Android не меняет звук уже созданного канала.
+// Файл звука должен лежать в android/app/src/main/res/raw/alarm.(wav|mp3|ogg).
+export const NOTIFICATION_CHANNEL_ID = "reminders_channel_v2"
+
+let channelReady = false
+let syncInProgress = false
 
 export const ensureNotificationChannel = async () => {
-  if (isChannelCreated) return
+  if (!Capacitor.isNativePlatform() || channelReady) return
   try {
-      await LocalNotifications.createChannel({
-        id: 'reminders_channel',
-        name: 'Напоминания',
-        importance: 4,
-        visibility: 1,
-        sound: 'file://android.resource://com.burt.app/raw/alarm',
-        lights: true // Дополнительная настройка вибрации
-      })
-    isChannelCreated = true
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display !== "granted") {
+      const requested = await LocalNotifications.requestPermissions()
+      if (requested.display !== "granted") return
+    }
+
+    await LocalNotifications.createChannel({
+      id: NOTIFICATION_CHANNEL_ID,
+      name: "Напоминания",
+      description: "Напоминания из графика смен",
+      importance: 5,
+      visibility: 1,
+      sound: "alarm",
+      lights: true,
+      vibration: true,
+    })
+    channelReady = true
   } catch (error) {
-    console.error('Error creating notification channel:', error)
+    console.error("Ошибка настройки канала уведомлений:", error)
   }
 }
 
 export const cancelNotification = async (notificationId: string) => {
+  if (!Capacitor.isNativePlatform()) return
+  const id = Number(notificationId)
+  if (!Number.isSafeInteger(id)) return
   try {
-    await LocalNotifications.cancel({ notifications: [{ id: parseInt(notificationId) }] })
+    await LocalNotifications.cancel({ notifications: [{ id }] })
   } catch (error) {
-    console.error('Error canceling notification:', error)
+    console.error("Ошибка отмены уведомления:", error)
   }
 }
 
 export const cancelAllNotifications = async () => {
+  if (!Capacitor.isNativePlatform()) return
   try {
-    await LocalNotifications.cancel({ notifications: [] })
-  } catch (error) {
-    console.error('Error canceling all notifications:', error)
-  }
-}
-
-export const scheduleLocalNotification = async (notificationId: string, title: string, body: string, date: Date) => {
-  try {
-    await ensureNotificationChannel()
-await LocalNotifications.schedule({
-        notifications: [{
-          id: parseInt(notificationId),
-          title,
-          body,
-          smallIcon: 'ic_notification_calendar',
-          sound: 'file://android.resource://com.burt.app/raw/alarm',
-          vibrate: [0, 1000, 500, 1000],
-          priority: 'high',
-          schedule: {
-at: date,
-            allowWhileIdle: true,
-          },
-        }]
-      })
-  } catch (error) {
-    console.error('Error scheduling notification:', error)
-  }
-}
-
-export const scheduleAllNotificationsFromSchedule = async (shifts: Map<string, Shift>) => {
-  try {
-    await ensureNotificationChannel()
-    
     const pending = await LocalNotifications.getPending()
-    const scheduledIds = new Set(pending.notifications.map(n => n.id))
-    
-    for (const [dateKey, shift] of shifts) {
-      if (!shift.notifications) continue
-      
-      const [year, month, day] = dateKey.split('-').map(Number)
-      
-      for (const notification of shift.notifications) {
-        const notificationId = parseInt(notification.id)
-        const [hours, minutes] = notification.time.split(':').map(Number)
-        const notificationDate = new Date(year, month - 1, day, hours, minutes, 0)
-        
-        const now = new Date()
-        if (notificationDate > now && !scheduledIds.has(notificationId)) {
-await LocalNotifications.schedule({
-              notifications: [{
-                id: notificationId,
-                title: "Напоминание",
-                body: notification.message || "У вас есть напоминание!",
-                smallIcon: 'ic_notification_calendar',
-                sound: 'file://android.resource://com.burt.app/raw/alarm',
-                vibrate: [0, 1000, 500, 1000],
-                priority: 'high',
-                schedule: {
-                  at: notificationDate,
-                  allowWhileIdle: true,
-                },
-              }]
-            })
-        }
-      }
+    if (pending.notifications.length) {
+      await LocalNotifications.cancel({
+        notifications: pending.notifications.map(({ id }) => ({ id })),
+      })
     }
   } catch (error) {
-    console.error('Error scheduling all notifications:', error)
+    console.error("Ошибка отмены уведомлений:", error)
   }
 }
 
-/**
- * Ищет уведомления, которые должны сработать ровно в текущую минуту.
- * Дата берётся в формате YYYY-MM-DD, чтобы совпасть с ключами карты смен.
- */
-export const checkNotifications = (shifts: Map<string, Shift>, currentTime: Date) => {
-  const now = currentTime
-  const currentDateKey = now.toISOString().split('T')[0]
-
-  const shift = shifts.get(currentDateKey)
-  if (shift && shift.notifications) {
-    return shift.notifications.filter(notification => {
-      const [hours, minutes] = notification.time.split(':').map(Number)
-      return now.getHours() === hours && now.getMinutes() === minutes
-    })
-  }
-  return []
+const toLocalDate = (dateKey: string, time: string): Date | null => {
+  const [year, month, day] = dateKey.split("-").map(Number)
+  const [hours, minutes] = time.split(":").map(Number)
+  if (![year, month, day, hours, minutes].every(Number.isFinite)) return null
+  const date = new Date(year, month - 1, day, hours, minutes, 0, 0)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
-/**
- * Показывает нативное уведомление через Capacitor LocalNotifications.
- * Используется для уведомлений, которые должны работать на выключенном экране.
- */
-export const scheduleNotification = async (title: string, bodyOrOptions?: string | NotificationOptions, notificationId?: string, date?: Date) => {
+/** Единственное место, которое планирует системные напоминания из расписания. */
+export const scheduleAllNotificationsFromSchedule = async (shifts: Map<string, Shift>) => {
+  if (!Capacitor.isNativePlatform() || syncInProgress) return
+  syncInProgress = true
   try {
     await ensureNotificationChannel()
-    const now = date || new Date()
-    const body = typeof bodyOrOptions === 'string' 
-      ? bodyOrOptions 
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display !== "granted") return
+
+    // Полная синхронизация убирает старые ID/время и предотвращает накопление дублей.
+    const pending = await LocalNotifications.getPending()
+    if (pending.notifications.length) {
+      await LocalNotifications.cancel({
+        notifications: pending.notifications.map(({ id }) => ({ id })),
+      })
+    }
+
+    const now = new Date()
+    const notifications: LocalNotificationSchema[] = []
+    const usedIds = new Set<number>()
+
+    for (const [dateKey, shift] of shifts) {
+      for (const notification of shift.notifications ?? []) {
+        const id = Number(notification.id)
+        const at = toLocalDate(dateKey, notification.time)
+        if (!Number.isSafeInteger(id) || id < 0 || !at || at <= now || usedIds.has(id)) continue
+        usedIds.add(id)
+        notifications.push({
+          id,
+          title: "Напоминание",
+          body: notification.message || "У вас есть напоминание!",
+          smallIcon: "ic_notification_calendar",
+          channelId: NOTIFICATION_CHANNEL_ID,
+          schedule: { at, allowWhileIdle: true },
+        })
+      }
+    }
+
+    // Android ограничивает количество ожидающих локальных уведомлений; отправляем пакетом.
+    if (notifications.length) {
+      await LocalNotifications.schedule({ notifications })
+    }
+  } catch (error) {
+    console.error("Ошибка синхронизации уведомлений:", error)
+  } finally {
+    syncInProgress = false
+  }
+}
+
+/** Локальная дата, без преобразования в UTC. */
+export const checkNotifications = (shifts: Map<string, Shift>, currentTime: Date) => {
+  const year = currentTime.getFullYear()
+  const month = String(currentTime.getMonth() + 1).padStart(2, "0")
+  const day = String(currentTime.getDate()).padStart(2, "0")
+  const currentDateKey = `${year}-${month}-${day}`
+  const shift = shifts.get(currentDateKey)
+  if (!shift?.notifications) return []
+  return shift.notifications.filter((notification) => {
+    const [hours, minutes] = notification.time.split(":").map(Number)
+    return currentTime.getHours() === hours && currentTime.getMinutes() === minutes
+  })
+}
+
+/** Совместимость со старым API. Для новых напоминаний используйте синхронизацию расписания. */
+export const scheduleNotification = async (
+  title: string,
+  bodyOrOptions?: string | NotificationOptions,
+  notificationId?: string,
+  date?: Date,
+) => {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await ensureNotificationChannel()
+    const id = Number(notificationId || Date.now())
+    if (!Number.isSafeInteger(id)) throw new Error("Некорректный ID уведомления")
+    const body = typeof bodyOrOptions === "string"
+      ? bodyOrOptions
       : bodyOrOptions?.body || "У вас есть напоминание!"
     await LocalNotifications.schedule({
       notifications: [{
-        id: parseInt(notificationId || Date.now().toString()),
+        id,
         title,
         body,
-        smallIcon: 'ic_notification_calendar',
-        schedule: {
-          at: now,
-          allowWhileIdle: true,
-        },
-      }]
+        smallIcon: "ic_notification_calendar",
+        channelId: NOTIFICATION_CHANNEL_ID,
+        schedule: { at: date || new Date(), allowWhileIdle: true },
+      }],
     })
   } catch (error) {
-    console.error('Error showing notification:', error)
+    console.error("Ошибка планирования уведомления:", error)
   }
 }
