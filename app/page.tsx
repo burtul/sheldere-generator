@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ShiftCalendar } from "@/components/shift-calendar"
 import { MonthlySettingsModal } from "@/components/monthly-settings"
 import { ShiftEditor } from "@/components/shift-editor"
@@ -17,6 +17,7 @@ import { loadScheduleData, saveScheduleData, loadTeamShifts } from "@/lib/storag
 import { defaultColors, colorPresets } from "@/lib/color-presets"
 import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
+import { toast } from "sonner"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
 import {
@@ -112,6 +113,36 @@ export default function Dashboard() {
      if (scheduleData) {
        scheduleAllNotificationsFromSchedule(scheduleData.shifts)
      }
+   }, [scheduleData])
+
+   // В браузере (например, на Vercel) нет Capacitor-планировщика.
+   // Пока вкладка открыта, проверяем наступившие напоминания и показываем toast;
+   // системное browser Notification появится, только если пользователь уже разрешил его.
+   const firedBrowserNotifications = useRef<Set<string>>(new Set())
+   useEffect(() => {
+     if (!scheduleData) return
+     const checkDueNotifications = () => {
+       const now = new Date()
+       const due = checkNotifications(scheduleData.shifts, now)
+       const year = now.getFullYear()
+       const month = String(now.getMonth() + 1).padStart(2, "0")
+       const day = String(now.getDate()).padStart(2, "0")
+       const dateKey = `${year}-${month}-${day}`
+
+       due.forEach((notification: any) => {
+         const key = `${dateKey}:${notification.id}`
+         if (firedBrowserNotifications.current.has(key)) return
+         firedBrowserNotifications.current.add(key)
+         const body = notification.message || "У вас есть напоминание!"
+         toast("Напоминание", { description: body })
+         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+           new Notification("Напоминание", { body })
+         }
+       })
+     }
+     checkDueNotifications()
+     const timer = window.setInterval(checkDueNotifications, 10000)
+     return () => window.clearInterval(timer)
    }, [scheduleData])
 
    useEffect(() => {
