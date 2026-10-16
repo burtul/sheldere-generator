@@ -12,9 +12,7 @@ export const ensureNotificationChannel = async () => {
         importance: 4,
         visibility: 1,
         sound: 'file://android.resource://com.burt.app/raw/alarm',
-        lights: true,
-        vibration: true,
-        vibrate: [0, 1000, 500, 1000] // Дополнительная настройка вибрации
+        lights: true // Дополнительная настройка вибрации
       })
     isChannelCreated = true
   } catch (error) {
@@ -41,18 +39,21 @@ export const cancelAllNotifications = async () => {
 export const scheduleLocalNotification = async (notificationId: string, title: string, body: string, date: Date) => {
   try {
     await ensureNotificationChannel()
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: parseInt(notificationId),
-        title,
-        body,
-        smallIcon: 'ic_notification_calendar',
-        schedule: {
-          at: date,
-          allowWhileIdle: true,
-        },
-      }]
-    })
+await LocalNotifications.schedule({
+        notifications: [{
+          id: parseInt(notificationId),
+          title,
+          body,
+          smallIcon: 'ic_notification_calendar',
+          sound: 'file://android.resource://com.burt.app/raw/alarm',
+          vibrate: [0, 1000, 500, 1000],
+          priority: 'high',
+          schedule: {
+at: date,
+            allowWhileIdle: true,
+          },
+        }]
+      })
   } catch (error) {
     console.error('Error scheduling notification:', error)
   }
@@ -77,18 +78,21 @@ export const scheduleAllNotificationsFromSchedule = async (shifts: Map<string, S
         
         const now = new Date()
         if (notificationDate > now && !scheduledIds.has(notificationId)) {
-          await LocalNotifications.schedule({
-            notifications: [{
-              id: notificationId,
-              title: "Напоминание",
-              body: notification.message || "У вас есть напоминание!",
-              smallIcon: 'ic_notification_calendar',
-              schedule: {
-                at: notificationDate,
-                allowWhileIdle: true,
-              },
-            }]
-          })
+await LocalNotifications.schedule({
+              notifications: [{
+                id: notificationId,
+                title: "Напоминание",
+                body: notification.message || "У вас есть напоминание!",
+                smallIcon: 'ic_notification_calendar',
+                sound: 'file://android.resource://com.burt.app/raw/alarm',
+                vibrate: [0, 1000, 500, 1000],
+                priority: 'high',
+                schedule: {
+                  at: notificationDate,
+                  allowWhileIdle: true,
+                },
+              }]
+            })
         }
       }
     }
