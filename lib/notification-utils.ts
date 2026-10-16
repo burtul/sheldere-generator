@@ -159,3 +159,14 @@ export const scheduleNotification = async (
     console.error("Ошибка планирования уведомления:", error)
   }
 }
+
+
+/** Совместимость со старым импортом из shift-details-panel.tsx.
+ * Для новых напоминаний предпочтительна синхронизация через scheduleAllNotificationsFromSchedule.
+ */
+export const scheduleLocalNotification = async (
+  notificationId: string,
+  title: string,
+  body: string,
+  date: Date,
+) => scheduleNotification(title, body, notificationId, date)
