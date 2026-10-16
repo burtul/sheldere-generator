@@ -31,6 +31,7 @@ export default function VacationDialog({
 }: VacationDialogProps) {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [days, setDays] = useState<string>("")
+  const [name, setName] = useState<string>("")
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
