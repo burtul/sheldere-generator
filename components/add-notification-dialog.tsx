@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label"
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Event } from "@mui/icons-material"
 import { Capacitor } from "@capacitor/core"
-import { LocalNotifications } from '@capacitor/local-notifications'
+import { LocalNotifications } from "@capacitor/local-notifications"
 import { toast } from "sonner"
+import { ensureNotificationChannel } from "@/lib/notification-utils"
 
 interface AddNotificationDialogProps {
   date: string
@@ -18,90 +19,38 @@ interface AddNotificationDialogProps {
 export function AddNotificationDialog({ date, onAddNotification }: AddNotificationDialogProps) {
   const [time, setTime] = useState("")
   const [message, setMessage] = useState("")
-
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [permissionDenied, setPermissionDenied] = useState(false)
 
   useEffect(() => {
-    const requestPermission = async () => {
+    if (!Capacitor.isNativePlatform()) return
+    let cancelled = false
+    const setup = async () => {
       setIsRequestingPermission(true)
       try {
-        await LocalNotifications.createChannel({
-          id: 'reminders_channel',
-          name: 'Напоминания',
-          importance: 4,
-          visibility: 1,
-          sound: 'default',
-          lights: true,
-          vibration: true
-        })
-
+        await ensureNotificationChannel()
         const { display } = await LocalNotifications.checkPermissions()
-        if (display === 'denied') {
-          setPermissionDenied(true)
-          return
-        }
-        if (display !== 'granted') {
-          await LocalNotifications.requestPermissions()
-          const { display: newStatus } = await LocalNotifications.checkPermissions()
-          if (newStatus === 'denied') {
-            setPermissionDenied(true)
-          }
-        }
+        if (!cancelled) setPermissionDenied(display !== "granted")
       } catch (error) {
-        console.error('Error setting up notifications:', error)
+        console.error("Ошибка настройки разрешений уведомлений:", error)
+        if (!cancelled) setPermissionDenied(true)
       } finally {
-        setIsRequestingPermission(false)
+        if (!cancelled) setIsRequestingPermission(false)
       }
     }
-
-    if (Capacitor.isNativePlatform()) {
-      requestPermission()
-    }
+    void setup()
+    return () => { cancelled = true }
   }, [])
 
-  const handleSubmit = async () => {
-    if (!time || !message) return
-    if (permissionDenied) {
-      onAddNotification(time, message)
-      toast.success("Уведомление сохранено")
+  const handleSubmit = () => {
+    if (!time || !message.trim()) {
+      toast.error("Укажи время и текст напоминания")
       return
     }
-
-    try {
-      const [years, months, days] = date.split('-').map(Number)
-      const [hours, minutes] = time.split(':').map(Number)
-      
-      const notificationTime = new Date(years, months - 1, days, hours, minutes, 0)
-      
-      const now = new Date()
-      if (notificationTime <= now) {
-        const tomorrow = new Date(notificationTime)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        notificationTime.setTime(tomorrow.getTime())
-      }
-
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: Date.now(),
-            title: "Напоминание",
-            body: message,
-            smallIcon: "ic_notification_calendar",
-            schedule: {
-              at: notificationTime,
-              allowWhileIdle: true,
-            },
-          },
-        ],
-      })
-
-      onAddNotification(time, message)
-      toast.success("Уведомление сохранено")
-    } catch (error) {
-      console.error('Error scheduling notification:', error)
-      alert("Ошибка при добавлении уведомления")
-    }
+    // Не планируем уведомление здесь: родитель сохраняет его в расписании,
+    // а scheduleAllNotificationsFromSchedule синхронизирует системные уведомления.
+    onAddNotification(time, message.trim())
+    toast.success("Напоминание сохранено")
   }
 
   return (
@@ -111,24 +60,19 @@ export function AddNotificationDialog({ date, onAddNotification }: AddNotificati
       </DialogHeader>
       {isRequestingPermission && (
         <div className="flex justify-center py-2">
-          <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-          <span className="ml-2 text-sm text-gray-500">Запрос разрешения...</span>
+          <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+          <span className="ml-2 text-sm text-gray-500">Проверка разрешения…</span>
         </div>
       )}
-      {permissionDenied && (
+      {permissionDenied && Capacitor.isNativePlatform() && (
         <div className="p-2 mb-2 text-sm text-yellow-700 bg-yellow-50 rounded">
-          Разрешение на уведомления отклонено. Некоторые функции будут ограничены.
+          Разрешение на уведомления не выдано. Напоминание сохранится в расписании, но Android может его не показать.
         </div>
       )}
       <div className="space-y-4 py-4">
         <div className="space-y-2">
           <Label htmlFor="time">Время</Label>
-          <Input
-            id="time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
+          <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="message">Сообщение</Label>
