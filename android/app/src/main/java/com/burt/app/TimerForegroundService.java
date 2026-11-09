@@ -65,11 +65,11 @@ public class TimerForegroundService extends Service {
     private Notification createNotification() {
         // Create a pending intent to open the app
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT : 
+            PendingIntent.FLAG_UPDATE_CURRENT;
         PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent, 
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT : 
-                PendingIntent.FLAG_UPDATE_CURRENT
+            this, 0, notificationIntent, flags
         );
         
         return new NotificationCompat.Builder(this, CHANNEL_ID)
