@@ -20,6 +20,7 @@ import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { toast } from "sonner"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
+import { ShiftTimer } from "@/components/shift-timer"
 import {
   applyVisibleVacationsToSchedule,
   applyPreservedNotesAndVacations,
@@ -48,6 +49,8 @@ export default function Dashboard() {
     showTodoList: true
   })
   const [scheduleType, setScheduleType] = useState<"2x2" | "5days">("2x2")
+  const [isTimerEnabled, setIsTimerEnabled] = useState<boolean>(true)
+  const [currentDate, setCurrentDate] = useState<string | null>(null)
   const [schedule5DayType, setSchedule5DayType] = useState<"8hours" | "8-15">("8hours")
 
   // Первичная инициализация: восстанавливаем localStorage или создаём расписание по умолчанию.
@@ -108,6 +111,38 @@ export default function Dashboard() {
     }
   }, [])
 
+  // Загружаем состояние таймера из localStorage
+  useEffect(() => {
+    const savedTimerState = localStorage.getItem("shiftTimerEnabled")
+    if (savedTimerState !== null) {
+      setIsTimerEnabled(JSON.parse(savedTimerState))
+    }
+  }, [])
+
+  // Сохраняем состояние таймера в localStorage
+  useEffect(() => {
+    localStorage.setItem("shiftTimerEnabled", JSON.stringify(isTimerEnabled))
+  }, [isTimerEnabled])
+
+
+  // Обновляем текущую дату каждую минуту
+  useEffect(() => {
+    const updateCurrentDate = () => {
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      setCurrentDate(dateStr)
+    }
+
+    updateCurrentDate()
+    const interval = setInterval(updateCurrentDate, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Вычисляем текущую смену
+  const currentShift = useMemo(() => {
+    if (!scheduleData || !currentDate) return null
+    return scheduleData.shifts.get(currentDate) || null
+  }, [scheduleData, currentDate])
 // Эффект для планирования всех уведомлений из расписания
    useEffect(() => {
      if (scheduleData) {
@@ -678,6 +713,8 @@ export default function Dashboard() {
         onVacationEdit={handleVacationEdit}
         onVacationDelete={handleVacationDelete}
         onToggleVacation={handleToggleVacation}
+        isTimerEnabled={isTimerEnabled}
+        onTimerToggle={setIsTimerEnabled}
       />
 
       <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-40">
@@ -699,7 +736,7 @@ export default function Dashboard() {
 
               </div>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <TeamSelector
                 teams={["Бригада 1", "Бригада 2", "Бригада 3", "Бригада 4"]}
                 selectedTeam={selectedTeam}
@@ -707,6 +744,7 @@ export default function Dashboard() {
                 scheduleType={scheduleType}
                 schedule5DayType={schedule5DayType}
               />
+              <ShiftTimer currentShift={currentShift} isEnabled={isTimerEnabled} />
             </div>
           </div>
         </div>

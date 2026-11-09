@@ -36,6 +36,8 @@ interface BurgerMenuProps {
   onToggleVacation?: (index: number, isVisible: boolean) => void
   showWorkShiftsDuringVacation?: boolean
   onShowWorkShiftsDuringVacationChange?: (value: boolean) => void
+  isTimerEnabled?: boolean
+  onTimerToggle?: (enabled: boolean) => void
 }
 
 export default function BurgerMenu({
@@ -56,6 +58,8 @@ export default function BurgerMenu({
   vacations = [],
   showWorkShiftsDuringVacation = false,
   onShowWorkShiftsDuringVacationChange,
+  isTimerEnabled = true,
+  onTimerToggle,
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -88,6 +92,7 @@ export default function BurgerMenu({
   const [openClearDialog, setOpenClearDialog] = useState(false)
   const [localScheduleType, setLocalScheduleType] = useState(currentScheduleType)
   const [openVacationDialog, setOpenVacationDialog] = useState(false)
+  const [localTimerEnabled, setLocalTimerEnabled] = useState(isTimerEnabled)
 
 
   const colorPresets = {
@@ -111,6 +116,10 @@ export default function BurgerMenu({
       setWorkColor(dayColor)
     }
   }, [currentScheduleType, dayColor]) // Added dayColor dependency
+
+  useEffect(() => {
+    setLocalTimerEnabled(isTimerEnabled)
+  }, [isTimerEnabled])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -190,6 +199,15 @@ export default function BurgerMenu({
   const handleThemeToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation()
     setDarkMode(!darkMode)
+  }
+
+  const handleTimerToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation()
+    const newState = !localTimerEnabled
+    setLocalTimerEnabled(newState)
+    if (onTimerToggle) {
+      onTimerToggle(newState)
+    }
   }
 
   const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -430,6 +448,23 @@ export default function BurgerMenu({
                   />
                 </ListItem>
 
+
+                {/* Timer Toggle */}
+                <ListItem disablePadding>
+                  <ListItemButton>
+                    <ListItemIcon>
+                      <ScheduleIcon color="action" />
+                    </ListItemIcon>
+                    <ListItemText primary="Таймер смены" secondary="Показывать время до конца смены" />
+                  </ListItemButton>
+                  <Switch
+                    checked={localTimerEnabled}
+                    onChange={handleTimerToggle}
+                    color="primary"
+                    edge="end"
+                    sx={{ mr: 1 }}
+                  />
+                </ListItem>
                 {/* Clear User Data */}
                 <ListItem disablePadding>
                   <ListItemButton onClick={handleOpenClearDialog}>
