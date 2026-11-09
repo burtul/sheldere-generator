@@ -19,7 +19,8 @@ import { Settings2, Calendar, Edit2, Plus } from "lucide-react"
 import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { toast } from "sonner"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
-import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification, updateShiftTimerNotification, hideShiftTimerNotification } from "@/lib/notification-utils"
+import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
+import { ForegroundService } from "@/plugins/foreground-service"
 
 import {
   applyVisibleVacationsToSchedule,
@@ -144,10 +145,13 @@ export default function Dashboard() {
     return scheduleData.shifts.get(currentDate) || null
   }, [scheduleData, currentDate])
 
-  // Таймер смены в статус-баре через уведомление
+  // Таймер смены в статус-баре через Foreground Service (Live Activity аналог)
   useEffect(() => {
-    if (!isTimerEnabled || !currentShift || !Capacitor.isNativePlatform()) {
-      hideShiftTimerNotification()
+    if (!isTimerEnabled || !currentShift) {
+      // Скрываем уведомление при отключении таймера
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        ForegroundService.stopTimerService().catch(() => {});
+      }
       return
     }
 
@@ -165,7 +169,9 @@ export default function Dashboard() {
 
     const shiftStartTime = DEFAULT_SHIFT_START_TIMES[currentShift.type]
     if (!shiftStartTime) {
-      hideShiftTimerNotification()
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        ForegroundService.stopTimerService().catch(() => {});
+      }
       return
     }
 
@@ -208,7 +214,9 @@ export default function Dashboard() {
       const diffMs = shiftEnd.getTime() - now.getTime()
 
       if (diffMs <= 0) {
-        hideShiftTimerNotification()
+        if (typeof window !== 'undefined' && window.Capacitor) {
+          ForegroundService.stopTimerService().catch(() => {});
+        }
         return
       }
 
@@ -217,13 +225,64 @@ export default function Dashboard() {
       const minutes = diffMinutes % 60
       const timeRemaining = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
 
-      updateShiftTimerNotification(timeRemaining)
+      // Обновляем Foreground Service
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        if (Capacitor.isNativePlatform()) {
+          ForegroundService.updateTimerService(timeRemaining).catch(() => {});
+        }
+      }
+    }
+
+    // Запускаем сервис
+    if (typeof window !== 'undefined' && window.Capacitor && Capacitor.isNativePlatform()) {
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      
+      let shiftStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        shiftStartTime.hours,
+        shiftStartTime.minutes
+      )
+      
+      let shiftEnd = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        endHours,
+        endMinutes
+      )
+      
+      if (endHours < shiftStartTime.hours && (currentShift.type === "night" || currentShift.type === "night2")) {
+        shiftEnd = new Date(shiftEnd.getTime() + 24 * 60 * 60 * 1000)
+      }
+      
+      if (now >= shiftEnd) {
+        shiftStart = new Date(shiftStart.getTime() + 24 * 60 * 60 * 1000)
+        shiftEnd = new Date(shiftStart.getTime() + shiftDurationMinutes * 60 * 1000)
+      }
+      
+      const diffMs = shiftEnd.getTime() - now.getTime()
+      
+      if (diffMs > 0) {
+        const diffMinutes = Math.floor(diffMs / 60000)
+        const hours = Math.floor(diffMinutes / 60)
+        const minutes = diffMinutes % 60
+        const timeRemaining = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+        ForegroundService.startTimerService(timeRemaining).catch(() => {});
+      }
     }
 
     updateTimer()
     const interval = setInterval(updateTimer, 60000) // Обновляем каждую минуту
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        ForegroundService.stopTimerService().catch(() => {});
+      }
+    }
   }, [currentShift, isTimerEnabled])
 
 // Эффект для планирования всех уведомлений из расписания
