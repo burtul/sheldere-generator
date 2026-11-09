@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { ShiftCalendar } from "@/components/shift-calendar"
 import { MonthlySettingsModal } from "@/components/monthly-settings"
 import { ShiftEditor } from "@/components/shift-editor"
