@@ -170,3 +170,83 @@ export const scheduleLocalNotification = async (
   body: string,
   date: Date,
 ) => scheduleNotification(title, body, notificationId, date)
+
+// Constants for shift timer notification
+const SHIFT_TIMER_NOTIFICATION_ID = 999999
+const SHIFT_TIMER_CHANNEL_ID = "shift_timer_channel"
+let shiftTimerNotificationReady = false
+
+/**
+ * Ensure notification channel for shift timer exists
+ */
+export const ensureShiftTimerChannel = async () => {
+  if (!Capacitor.isNativePlatform() || shiftTimerNotificationReady) return
+  try {
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display !== "granted") {
+      const requested = await LocalNotifications.requestPermissions()
+      if (requested.display !== "granted") return
+    }
+
+    await LocalNotifications.createChannel({
+      id: SHIFT_TIMER_CHANNEL_ID,
+      name: "Таймер смены",
+      description: "Отображение времени до конца смены",
+      importance: 3,
+      visibility: 1,
+      sound: null,
+      lights: false,
+      vibration: false,
+    })
+    shiftTimerNotificationReady = true
+  } catch (error) {
+    console.error("Ошибка создания канала для таймера смены:", error)
+  }
+}
+
+/**
+ * Show or update shift timer notification in status bar
+ * @param timeRemaining - Time in hh:mm format
+ */
+export const updateShiftTimerNotification = async (timeRemaining: string) => {
+  if (!Capacitor.isNativePlatform()) return
+  
+  try {
+    await ensureShiftTimerChannel()
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display !== "granted") return
+
+    // Cancel existing notification first
+    await LocalNotifications.cancel({
+      notifications: [{ id: SHIFT_TIMER_NOTIFICATION_ID }]
+    })
+
+    // Show new notification with updated timer
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: SHIFT_TIMER_NOTIFICATION_ID,
+        title: "Таймер смены",
+        body: `До конца смены: ${timeRemaining}`,
+        smallIcon: "ic_notification_timer",
+        channelId: SHIFT_TIMER_CHANNEL_ID,
+        schedule: { at: new Date(Date.now() + 1000) },
+      }],
+    })
+  } catch (error) {
+    console.error("Ошибка обновления уведомления таймера:", error)
+  }
+}
+
+/**
+ * Hide shift timer notification
+ */
+export const hideShiftTimerNotification = async () => {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await LocalNotifications.cancel({
+      notifications: [{ id: SHIFT_TIMER_NOTIFICATION_ID }]
+    })
+  } catch (error) {
+    console.error("Ошибка скрытия уведомления таймера:", error)
+  }
+}
