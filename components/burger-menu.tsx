@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
 import { isValidDate, isDateStringValid } from "@/lib/utils"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon } from "@mui/icons-material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon, PictureInPictureAlt as LiveIslandIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import VacationDialog from "./vacation-dialog"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
@@ -38,6 +38,16 @@ interface BurgerMenuProps {
   onShowWorkShiftsDuringVacationChange?: (value: boolean) => void
   isTimerEnabled?: boolean
   onTimerToggle?: (enabled: boolean) => void
+  /** Поддерживает ли устройство плавающий live-островок. */
+  isLiveIslandSupported?: boolean
+  /** Выдано ли разрешение «Поверх других приложений». */
+  isLiveIslandPermissionGranted?: boolean
+  /** Включён ли островок пользователем. */
+  isLiveIslandEnabled?: boolean
+  onLiveIslandToggle?: (enabled: boolean) => void
+  onRequestLiveIslandPermission?: () => void
+  /** Где сейчас показывается таймер. */
+  liveIndicatorMode?: "island" | "notification" | "off"
 }
 
 export default function BurgerMenu({
@@ -60,6 +70,12 @@ export default function BurgerMenu({
   onShowWorkShiftsDuringVacationChange,
   isTimerEnabled = true,
   onTimerToggle,
+  isLiveIslandSupported = false,
+  isLiveIslandPermissionGranted = false,
+  isLiveIslandEnabled = true,
+  onLiveIslandToggle,
+  onRequestLiveIslandPermission,
+  liveIndicatorMode = "off",
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -93,6 +109,7 @@ export default function BurgerMenu({
   const [localScheduleType, setLocalScheduleType] = useState(currentScheduleType)
   const [openVacationDialog, setOpenVacationDialog] = useState(false)
   const [localTimerEnabled, setLocalTimerEnabled] = useState(isTimerEnabled)
+  const [localIslandEnabled, setLocalIslandEnabled] = useState(isLiveIslandEnabled)
 
 
   const colorPresets = {
@@ -120,6 +137,10 @@ export default function BurgerMenu({
   useEffect(() => {
     setLocalTimerEnabled(isTimerEnabled)
   }, [isTimerEnabled])
+
+  useEffect(() => {
+    setLocalIslandEnabled(isLiveIslandEnabled)
+  }, [isLiveIslandEnabled])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -209,6 +230,32 @@ export default function BurgerMenu({
       onTimerToggle(newState)
     }
   }
+
+  const handleIslandToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation()
+    const newState = !localIslandEnabled
+    setLocalIslandEnabled(newState)
+    if (onLiveIslandToggle) {
+      onLiveIslandToggle(newState)
+    }
+  }
+
+  const handleIslandAction = () => {
+    // Без разрешения «Поверх других приложений» островок не может рисоваться.
+    if (!isLiveIslandPermissionGranted) {
+      onRequestLiveIslandPermission?.()
+    }
+  }
+
+  const islandSecondaryText = !isTimerEnabled
+    ? "Сначала включите таймер смены"
+    : !isLiveIslandPermissionGranted
+      ? "Нужно разрешение «Поверх других приложений»"
+      : !localIslandEnabled
+        ? "Таймер показывается в уведомлении"
+        : liveIndicatorMode === "island"
+          ? "Активен поверх приложений"
+          : "Появится во время смены"
 
   const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newType = event.target.value as "2x2" | "5days"
@@ -465,6 +512,26 @@ export default function BurgerMenu({
                     sx={{ mr: 1 }}
                   />
                 </ListItem>
+
+                {/* Live-островок в районе камеры */}
+                {isLiveIslandSupported && (
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={handleIslandAction}>
+                      <ListItemIcon>
+                        <LiveIslandIcon color={isLiveIslandPermissionGranted && localIslandEnabled ? "primary" : "action"} />
+                      </ListItemIcon>
+                      <ListItemText primary="Островок смены" secondary={islandSecondaryText} />
+                    </ListItemButton>
+                    <Switch
+                      checked={localIslandEnabled && isLiveIslandPermissionGranted}
+                      onChange={handleIslandToggle}
+                      color="primary"
+                      edge="end"
+                      disabled={!isLiveIslandPermissionGranted}
+                      sx={{ mr: 1 }}
+                    />
+                  </ListItem>
+                )}
                 {/* Clear User Data */}
                 <ListItem disablePadding>
                   <ListItemButton onClick={handleOpenClearDialog}>

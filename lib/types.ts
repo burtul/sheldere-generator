@@ -47,7 +47,7 @@ export interface ScheduleData {
   monthlySettings: Map<string, MonthlySettings>;
   globalSettings: GlobalSettings;
   globalNotes?: string;
-  vacations?: { startDate: Date; days: number; isVisible: boolean | undefined }[];
+  vacations?: { startDate: Date; days: number; name?: string; isVisible: boolean | undefined }[];
   /** Показывать рабочие смены в период отпуска (не заменять на off) */
   showWorkShiftsDuringVacation?: boolean;
   teamShifts?: TeamShiftData[];

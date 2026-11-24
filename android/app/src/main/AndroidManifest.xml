@@ -36,7 +36,22 @@
 
         <service
             android:name=".TimerForegroundService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="shift_timer_notification" />
+        </service>
+
+        <!-- Live-островок: плавающее окно в районе камеры поверх других приложений. -->
+        <service
+            android:name=".LiveIslandService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="live_island_shift_timer" />
+        </service>
     </application>
 
 <!-- Permissions -->
@@ -46,6 +61,10 @@
      <uses-permission android:name="android.permission.VIBRATE" />
      <uses-permission android:name="android.permission.WAKE_LOCK" />
      <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+     <!-- Android 14+: foreground-сервис специального назначения (таймер/островок). -->
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+     <!-- Live-островок: окно поверх других приложений. -->
+     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
      <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
      <uses-permission android:name="android.permission.INTERNET" />
      

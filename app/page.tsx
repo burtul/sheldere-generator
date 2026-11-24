@@ -20,7 +20,7 @@ import { Menu as MenuIcon, Telegram } from "@mui/icons-material"
 import { toast } from "sonner"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
-import { ForegroundService } from "@/plugins/foreground-service"
+import { useLiveShiftIndicator } from "@/hooks/use-live-shift-indicator"
 
 import {
   applyVisibleVacationsToSchedule,
@@ -145,145 +145,15 @@ export default function Dashboard() {
     return scheduleData.shifts.get(currentDate) || null
   }, [scheduleData, currentDate])
 
-  // Таймер смены в статус-баре через Foreground Service (Live Activity аналог)
-  useEffect(() => {
-    if (!isTimerEnabled || !currentShift) {
-      // Скрываем уведомление при отключении таймера
-      if (typeof window !== 'undefined' && window.Capacitor) {
-        ForegroundService.stopTimerService().catch(() => {});
-      }
-      return
-    }
-
-    // Стандартные времена начала смен по типу
-    const DEFAULT_SHIFT_START_TIMES: Record<string, { hours: number; minutes: number }> = {
-      day: { hours: 8, minutes: 0 },
-      night: { hours: 20, minutes: 0 },
-      night2: { hours: 20, minutes: 0 },
-      off: { hours: 0, minutes: 0 },
-      offn: { hours: 0, minutes: 0 },
-      weekday: { hours: 8, minutes: 0 },
-      weekday15: { hours: 8, minutes: 0 },
-      weekday7: { hours: 8, minutes: 0 },
-    }
-
-    const shiftStartTime = DEFAULT_SHIFT_START_TIMES[currentShift.type]
-    if (!shiftStartTime) {
-      if (typeof window !== 'undefined' && window.Capacitor) {
-        ForegroundService.stopTimerService().catch(() => {});
-      }
-      return
-    }
-
-    // Ночные смены переходят через полночь
-    const shiftDurationMinutes = currentShift.hours * 60 + currentShift.minutes
-    const endHours = (shiftStartTime.hours + Math.floor(shiftDurationMinutes / 60)) % 24
-    const endMinutes = (shiftStartTime.minutes + (shiftDurationMinutes % 60)) % 60
-
-    const updateTimer = () => {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-      let shiftStart = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        shiftStartTime.hours,
-        shiftStartTime.minutes
-      )
-
-      let shiftEnd = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        endHours,
-        endMinutes
-      )
-
-      // Ночная смена переходит через полночь
-      if (endHours < shiftStartTime.hours && (currentShift.type === "night" || currentShift.type === "night2")) {
-        shiftEnd = new Date(shiftEnd.getTime() + 24 * 60 * 60 * 1000)
-      }
-
-      // Если смена уже закончилась сегодня, берем следующую
-      if (now >= shiftEnd) {
-        shiftStart = new Date(shiftStart.getTime() + 24 * 60 * 60 * 1000)
-        shiftEnd = new Date(shiftStart.getTime() + shiftDurationMinutes * 60 * 1000)
-      }
-
-      const diffMs = shiftEnd.getTime() - now.getTime()
-
-      if (diffMs <= 0) {
-        if (typeof window !== 'undefined' && window.Capacitor) {
-          ForegroundService.stopTimerService().catch(() => {});
-        }
-        return
-      }
-
-      const diffMinutes = Math.floor(diffMs / 60000)
-      const hours = Math.floor(diffMinutes / 60)
-      const minutes = diffMinutes % 60
-      const timeRemaining = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
-
-      // Обновляем Foreground Service
-      if (typeof window !== 'undefined' && window.Capacitor) {
-        if (Capacitor.isNativePlatform()) {
-          ForegroundService.updateTimerService(timeRemaining).catch(() => {});
-        }
-      }
-    }
-
-    // Запускаем сервис
-    if (typeof window !== 'undefined' && window.Capacitor && Capacitor.isNativePlatform()) {
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
-      let shiftStart = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        shiftStartTime.hours,
-        shiftStartTime.minutes
-      )
-      
-      let shiftEnd = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        endHours,
-        endMinutes
-      )
-      
-      if (endHours < shiftStartTime.hours && (currentShift.type === "night" || currentShift.type === "night2")) {
-        shiftEnd = new Date(shiftEnd.getTime() + 24 * 60 * 60 * 1000)
-      }
-      
-      if (now >= shiftEnd) {
-        shiftStart = new Date(shiftStart.getTime() + 24 * 60 * 60 * 1000)
-        shiftEnd = new Date(shiftStart.getTime() + shiftDurationMinutes * 60 * 1000)
-      }
-      
-      const diffMs = shiftEnd.getTime() - now.getTime()
-      
-      if (diffMs > 0) {
-        const diffMinutes = Math.floor(diffMs / 60000)
-        const hours = Math.floor(diffMinutes / 60)
-        const minutes = diffMinutes % 60
-        const timeRemaining = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
-        ForegroundService.startTimerService(timeRemaining).catch(() => {});
-      }
-    }
-
-    updateTimer()
-    const interval = setInterval(updateTimer, 60000) // Обновляем каждую минуту
-
-    return () => {
-      clearInterval(interval)
-      if (typeof window !== 'undefined' && window.Capacitor) {
-        ForegroundService.stopTimerService().catch(() => {});
-      }
-    }
-  }, [currentShift, isTimerEnabled])
+  // Live-индикатор смены: островок поверх приложений или foreground-уведомление.
+  const {
+    mode: liveIndicatorMode,
+    islandSupported,
+    islandPermission,
+    islandEnabled,
+    setIslandEnabled,
+    requestIslandPermission,
+  } = useLiveShiftIndicator(currentShift, isTimerEnabled)
 
 // Эффект для планирования всех уведомлений из расписания
    useEffect(() => {
@@ -857,6 +727,12 @@ export default function Dashboard() {
         onToggleVacation={handleToggleVacation}
         isTimerEnabled={isTimerEnabled}
         onTimerToggle={setIsTimerEnabled}
+        isLiveIslandSupported={islandSupported}
+        isLiveIslandPermissionGranted={islandPermission}
+        isLiveIslandEnabled={islandEnabled}
+        onLiveIslandToggle={setIslandEnabled}
+        onRequestLiveIslandPermission={requestIslandPermission}
+        liveIndicatorMode={liveIndicatorMode}
       />
 
       <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-40">

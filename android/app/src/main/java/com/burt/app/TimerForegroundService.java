@@ -37,8 +37,7 @@ public class TimerForegroundService extends Service {
             );
             channel.setDescription(CHANNEL_DESCRIPTION);
             channel.setSound(null, null);
-            channel.setVibrationPattern(new long[]{0});
-            channel.setVibratePattern(new long[]{0, 0});
+            channel.enableVibration(false);
             notificationManager.createNotificationChannel(channel);
         }
     }
