@@ -17,6 +17,10 @@ export interface HyperIslandAvailability {
   installed: boolean
   /** Похоже ли устройство на Xiaomi/Redmi/POCO. */
   deviceSupported: boolean
+  /** Поддерживает ли прошивка нативные focus notifications HyperOS. */
+  nativeSupported: boolean
+  /** Разрешила ли система focus-уведомления этому приложению. */
+  focusAllowed: boolean
   /** Запущен ли сейчас таймер Hyper Island. */
   running: boolean
 }

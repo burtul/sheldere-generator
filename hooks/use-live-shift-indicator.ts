@@ -38,6 +38,10 @@ export interface LiveShiftIndicator {
   hyperBridgeInstalled: boolean
   /** Похоже ли устройство на Xiaomi/Redmi/POCO. */
   hyperDeviceSupported: boolean
+  /** Поддерживает ли прошивка нативный Hyper Island. */
+  hyperNativeSupported: boolean
+  /** Разрешены ли focus-уведомления HyperOS. */
+  hyperFocusAllowed: boolean
   /** Включён ли режим Hyper Island. */
   hyperEnabled: boolean
   /** Включить/выключить режим Hyper Island. */
@@ -81,6 +85,8 @@ export function useLiveShiftIndicator(
   const [hyperEnabled, setHyperEnabledState] = useState(false)
   const [hyperBridgeInstalled, setHyperBridgeInstalled] = useState(false)
   const [hyperDeviceSupported, setHyperDeviceSupported] = useState(false)
+  const [hyperNativeSupported, setHyperNativeSupported] = useState(false)
+  const [hyperFocusAllowed, setHyperFocusAllowed] = useState(false)
 
   useEffect(() => {
     setIslandEnabledState(readIslandEnabled())
@@ -116,6 +122,8 @@ export function useLiveShiftIndicator(
     if (typeof window === "undefined" || !Capacitor.isNativePlatform()) {
       setHyperBridgeInstalled(false)
       setHyperDeviceSupported(false)
+      setHyperNativeSupported(false)
+      setHyperFocusAllowed(false)
       return
     }
 
@@ -123,16 +131,20 @@ export function useLiveShiftIndicator(
       const status = await HyperIsland.isAvailable()
       setHyperBridgeInstalled(status.installed)
       setHyperDeviceSupported(status.deviceSupported)
+      setHyperNativeSupported(status.nativeSupported)
+      setHyperFocusAllowed(status.focusAllowed)
 
-      // Если Hyper Bridge установлен, а выбора ещё не было — включаем режим.
+      // Если Hyper Island доступен, а выбора ещё не было — включаем режим.
       const saved = window.localStorage.getItem(HYPER_ENABLED_KEY)
-      if (saved === null && status.installed) {
+      if (saved === null && (status.nativeSupported || status.installed)) {
         setHyperEnabledState(true)
         window.localStorage.setItem(HYPER_ENABLED_KEY, "true")
       }
     } catch {
       setHyperBridgeInstalled(false)
       setHyperDeviceSupported(false)
+      setHyperNativeSupported(false)
+      setHyperFocusAllowed(false)
     }
   }, [])
 
@@ -207,7 +219,7 @@ export function useLiveShiftIndicator(
       return
     }
 
-    const useHyper = hyperEnabled && hyperBridgeInstalled
+    const useHyper = hyperEnabled && (hyperNativeSupported || hyperBridgeInstalled)
     const useIsland = islandSupported && islandPermission && islandEnabled
 
     if (useHyper) {
@@ -366,6 +378,7 @@ export function useLiveShiftIndicator(
     islandSupported,
     hyperEnabled,
     hyperBridgeInstalled,
+    hyperNativeSupported,
   ])
 
   return {
@@ -380,6 +393,8 @@ export function useLiveShiftIndicator(
     resetIslandPosition,
     hyperBridgeInstalled,
     hyperDeviceSupported,
+    hyperNativeSupported,
+    hyperFocusAllowed,
     hyperEnabled,
     setHyperEnabled,
     openHyperBridge,

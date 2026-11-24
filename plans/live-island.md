@@ -54,7 +54,8 @@ JS не может обновлять надпись «каждую минуту
 | `android/.../res/drawable/live_island_background.xml` | Фон капсулы |
 | `android/.../res/drawable/live_island_dot.xml` | Зелёная точка «смена идёт» |
 | `plugins/hyper-island/index.ts` | JS-интерфейс режима Hyper Island |
-| `android/.../HyperIslandPlugin.java` | Проверка Hyper Bridge и запуск таймера |
+| `android/.../HyperIslandNotifier.java` | Нативный payload HyperOS (JSON + Bundle) |
+| `android/.../HyperIslandPlugin.java` | Проверка поддержки и запуск таймера |
 | `android/.../HyperIslandService.java` | Уведомление-таймер для Hyper Island |
 
 ## Разрешения
@@ -88,35 +89,42 @@ JS не может обновлять надпись «каждую минуту
 
 ## Hyper Island (Xiaomi HyperOS)
 
-Системный островок HyperOS нельзя включить из стороннего приложения напрямую.
-Приложение поддерживает связку с **Hyper Bridge** — это отдельное приложение,
-которое читает обычные Android-уведомления и рисует их в Hyper Island.
+На Xiaomi/Redmi/POCO с HyperOS 3+ приложение само собирает нативный
+focus-notification: системный островок рисует HyperOS, без Hyper Bridge и
+сторонних приложений.
+
+Как это устроено:
+
+- в extras уведомления кладётся JSON `miui.focus.param` (protocol 3);
+- в `miui.focus.pics` — Bundle с иконкой `miui.focus.pic_shift_icon`;
+- шаблон — `chatInfo` с `timerInfo` и `param_island.bigIslandArea` с
+  `sameWidthDigitInfo.timerInfo`;
+- `timerType = -1`, `timerWhen = конец смены` — дальше HyperOS сама ведёт
+  обратный отсчёт, обновлять уведомление не нужно.
+
+Payload собирается в `HyperIslandNotifier.java` напрямую (JSON + Bundle),
+без внешних библиотек и без повышения compileSdk.
 
 Как включить:
 
-1. Установить [Hyper Bridge](https://play.google.com/store/apps/details?id=com.d4viddf.hyperbridge).
-2. В Hyper Bridge выдать доступ к уведомлениям и включить «График смен» в списке приложений.
-3. В приложении: бургер-меню → **«Таймер и островок»** → **Hyper Island** → включить.
-4. Во время смены в системном островке появится обратный отсчёт.
+1. Бургер-меню → **«Таймер и островок»** → **Hyper Island** → включить.
+2. Разрешить уведомления; если система попросит — «Показывать в строке состояния».
+3. Во время смены появится системный островок с обратным отсчётом; наш
+   плавающий островок при этом отключится.
 
-Наш плавающий островок и Hyper Island взаимоисключающие: при включении Hyper
-Island окно не показывается. Уведомление, которое видит Hyper Bridge, содержит
-`setUsesChronometer(true)`, `setWhen(конец смены)` и категорию `STOPWATCH` —
-именно такие уведомления Hyper Bridge распознаёт как таймер и показывает
-с обратным отсчётом.
+Если прошивка не поддерживает focus notifications, карточка предлагает
+**Hyper Bridge** как fallback: он читает обычное уведомление с хронометром
+(`setUsesChronometer`, `setWhen`, категория `STOPWATCH`) и рисует его в Hyper Island.
 
 Ограничения:
 
-- Hyper Bridge работает только на Xiaomi/Redmi/POCO с HyperOS. На других
-  устройствах карточка Hyper Island остаётся с кнопкой установки, но системного
-  островка не будет.
-- Hyper Bridge пропускает уведомления в режиме «Не беспокоить».
-- Приложение должно быть разрешено в Hyper Bridge; после установки Hyper Bridge
-  включите «График смен» в его списке приложений.
-- Если Hyper Bridge не установлен, режим включать бессмысленно — останется
-  обычное уведомление с таймером.
+- Нужен HyperOS 3+ (Xiaomi/Redmi/POCO); на других Android системного островка нет.
+- Нужны разрешения на уведомления и показ в строке состояния. В режиме
+  «Не беспокоить» система может не показать островок.
+- Hyper Bridge (fallback) тоже пропускает уведомления в DND и требует
+  включить «График смен» в его списке приложений.
 
-![Режим Hyper Island включён](live-island-hyper.png)
+![Режим Hyper Island на эмуляторе (fallback через Hyper Bridge)](live-island-hyper.png)
 
 ## Как собрать и проверить
 
@@ -140,9 +148,10 @@ cd android
    приложение → позиция сохраняется.
 6. Тап по капсуле открывает приложение (если она ниже строки статуса).
 7. Выключить таймер или островок в меню → капсула исчезает.
-8. Hyper Island: установить Hyper Bridge, разрешить «График смен» в его
-   настройках, включить **Hyper Island** в секции. Системный островок покажет
-   обратный отсчёт, а наш плавающий островок отключится.
+8. Hyper Island: на Xiaomi HyperOS 3+ включить **Hyper Island** в секции —
+   системный островок покажет обратный отсчёт, а наш плавающий отключится.
+   Если прошивка не поддерживает focus notifications, карточка предложит
+   Hyper Bridge как fallback.
 
 В главном меню таймер и островок объединены в один пункт:
 

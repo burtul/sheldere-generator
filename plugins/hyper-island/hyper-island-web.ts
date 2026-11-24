@@ -4,6 +4,8 @@ import type { HyperIslandAvailability, HyperIslandPlugin } from "./index"
 const UNAVAILABLE: HyperIslandAvailability = {
   installed: false,
   deviceSupported: false,
+  nativeSupported: false,
+  focusAllowed: false,
   running: false,
 }
 

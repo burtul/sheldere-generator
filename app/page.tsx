@@ -156,6 +156,8 @@ export default function Dashboard() {
     moveIslandBy,
     resetIslandPosition,
     hyperBridgeInstalled,
+    hyperNativeSupported,
+    hyperFocusAllowed,
     hyperEnabled,
     setHyperEnabled,
     openHyperBridge,
@@ -741,6 +743,8 @@ export default function Dashboard() {
         onMoveLiveIsland={moveIslandBy}
         onResetLiveIslandPosition={resetIslandPosition}
         isHyperBridgeInstalled={hyperBridgeInstalled}
+        isHyperNativeSupported={hyperNativeSupported}
+        isHyperFocusAllowed={hyperFocusAllowed}
         isHyperIslandEnabled={hyperEnabled}
         onHyperIslandToggle={setHyperEnabled}
         onOpenHyperBridge={openHyperBridge}

@@ -60,10 +60,24 @@ public class HyperIslandPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void previewPayload(PluginCall call) {
+        Long endsAt = call.getLong("endsAt", System.currentTimeMillis() + 3_600_000L);
+        try {
+            JSObject result = new JSObject();
+            result.put("payload", HyperIslandNotifier.buildPayloadPreview(endsAt));
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject("Не удалось собрать payload", "PAYLOAD_FAILED");
+        }
+    }
+
+    @PluginMethod
     public void isAvailable(PluginCall call) {
         JSObject result = new JSObject();
         result.put("installed", isHyperBridgeInstalled());
         result.put("deviceSupported", isXiaomiDevice());
+        result.put("nativeSupported", HyperIslandNotifier.isSupported(context()));
+        result.put("focusAllowed", HyperIslandNotifier.hasFocusPermission(context()));
         result.put("running", HyperIslandService.isRunning);
         call.resolve(result);
     }

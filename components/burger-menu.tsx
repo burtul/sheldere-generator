@@ -52,6 +52,10 @@ interface BurgerMenuProps {
   onResetLiveIslandPosition?: () => void
   /** Установлен ли Hyper Bridge. */
   isHyperBridgeInstalled?: boolean
+  /** Поддерживает ли прошивка нативный Hyper Island. */
+  isHyperNativeSupported?: boolean
+  /** Разрешены ли focus-уведомления HyperOS. */
+  isHyperFocusAllowed?: boolean
   /** Включён ли режим Hyper Island. */
   isHyperIslandEnabled?: boolean
   onHyperIslandToggle?: (enabled: boolean) => void
@@ -88,6 +92,8 @@ export default function BurgerMenu({
   onMoveLiveIsland,
   onResetLiveIslandPosition,
   isHyperBridgeInstalled = false,
+  isHyperNativeSupported = false,
+  isHyperFocusAllowed = false,
   isHyperIslandEnabled = false,
   onHyperIslandToggle,
   onOpenHyperBridge,
@@ -286,20 +292,24 @@ export default function BurgerMenu({
           ? "Активен поверх приложений"
           : "Появится во время смены"
 
+  const hyperAvailable = isHyperNativeSupported || isHyperBridgeInstalled
+
   const timerMenuSecondaryText = !localTimerEnabled
     ? "Выключен"
-    : isHyperBridgeInstalled && localHyperEnabled
+    : hyperAvailable && localHyperEnabled
       ? "Hyper Island"
       : isLiveIslandSupported && isLiveIslandPermissionGranted && localIslandEnabled
         ? "Островок поверх приложений"
         : "Уведомление в статус-баре"
 
-  const hyperSecondaryText = !isHyperBridgeInstalled
-    ? "Нужен Hyper Bridge из Google Play"
+  const hyperSecondaryText = !hyperAvailable
+    ? "Нужен HyperOS 3+ или Hyper Bridge"
     : !localHyperEnabled
       ? "Выключен — работает наш островок"
       : liveIndicatorMode === "hyper"
-        ? "Таймер в системном островке"
+        ? isHyperNativeSupported
+          ? "Таймер в системном островке"
+          : "Таймер через Hyper Bridge"
         : "Появится во время смены"
 
   const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -969,20 +979,26 @@ export default function BurgerMenu({
                       checked={localHyperEnabled}
                       onChange={handleHyperToggle}
                       color="primary"
-                      disabled={!isHyperBridgeInstalled}
+                      disabled={!hyperAvailable}
                     />
                   </Box>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={onOpenHyperBridge}
-                    startIcon={<HyperIslandIcon />}
-                  >
-                    {isHyperBridgeInstalled ? "Открыть Hyper Bridge" : "Установить Hyper Bridge"}
-                  </Button>
+                  {!isHyperNativeSupported && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={onOpenHyperBridge}
+                      startIcon={<HyperIslandIcon />}
+                    >
+                      {isHyperBridgeInstalled ? "Открыть Hyper Bridge" : "Установить Hyper Bridge"}
+                    </Button>
+                  )}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
-                  В Hyper Bridge включите «График смен» и разрешите доступ к уведомлениям.
+                  {isHyperNativeSupported
+                    ? isHyperFocusAllowed
+                      ? "Островок рисует HyperOS — Hyper Bridge не нужен."
+                      : "Разрешите уведомления и показ в строке состояния HyperOS."
+                    : "В Hyper Bridge включите «График смен» и разрешите доступ к уведомлениям."}
                 </Typography>
 
                 {!localHyperEnabled && isLiveIslandSupported && isLiveIslandPermissionGranted && (

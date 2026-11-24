@@ -119,6 +119,14 @@ public class HyperIslandService extends Service {
         }
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openIntent, pendingFlags);
 
+        // На HyperOS 3+ собираем нативный focus-notification: островок рисует
+        // сама система, Hyper Bridge не нужен.
+        Notification nativeIsland =
+            HyperIslandNotifier.buildTimerNotification(this, CHANNEL_ID, endsAtMs, contentIntent);
+        if (nativeIsland != null) {
+            return nativeIsland;
+        }
+
         Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
