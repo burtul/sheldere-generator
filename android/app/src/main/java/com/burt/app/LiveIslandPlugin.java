@@ -155,6 +155,51 @@ public class LiveIslandPlugin extends Plugin {
         call.resolve();
     }
 
+    @PluginMethod
+    public void moveBy(PluginCall call) {
+        if (!LiveIslandService.isRunning) {
+            call.reject("Островок не запущен", "NOT_RUNNING");
+            return;
+        }
+
+        int dx = call.getInt("dx", 0);
+        int dy = call.getInt("dy", 0);
+
+        Intent intent = new Intent(context(), LiveIslandService.class);
+        intent.setAction(LiveIslandService.ACTION_MOVE_BY);
+        intent.putExtra(LiveIslandService.EXTRA_DX, dx);
+        intent.putExtra(LiveIslandService.EXTRA_DY, dy);
+
+        try {
+            context().startService(intent);
+        } catch (Exception error) {
+            call.reject("Не удалось сдвинуть островок", "SERVICE_MOVE_FAILED");
+            return;
+        }
+
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void resetPosition(PluginCall call) {
+        if (!LiveIslandService.isRunning) {
+            call.reject("Островок не запущен", "NOT_RUNNING");
+            return;
+        }
+
+        Intent intent = new Intent(context(), LiveIslandService.class);
+        intent.setAction(LiveIslandService.ACTION_RESET_POSITION);
+
+        try {
+            context().startService(intent);
+        } catch (Exception error) {
+            call.reject("Не удалось сбросить положение островка", "SERVICE_RESET_FAILED");
+            return;
+        }
+
+        call.resolve();
+    }
+
     private int topOffset(PluginCall call) {
         Integer value = call.getInt("topOffset", 0);
         return value == null ? 0 : value;

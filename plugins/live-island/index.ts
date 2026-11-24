@@ -63,6 +63,15 @@ export interface LiveIslandPlugin {
   /** Обновить текст на уже показанном островке. */
   update(options: LiveIslandPayload): Promise<void>
 
+  /**
+   * Сдвинуть островок на `dx`/`dy` (в dp).
+   * Работает, даже когда капсула лежит в зоне статус-бара, недоступной касаниям.
+   */
+  moveBy(options: { dx: number; dy: number }): Promise<void>
+
+  /** Вернуть островок по центру верхней кромки и забыть сохранённую позицию. */
+  resetPosition(): Promise<void>
+
   /** Скрыть островок и остановить сервис. */
   hide(): Promise<void>
 }

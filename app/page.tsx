@@ -153,6 +153,8 @@ export default function Dashboard() {
     islandEnabled,
     setIslandEnabled,
     requestIslandPermission,
+    moveIslandBy,
+    resetIslandPosition,
   } = useLiveShiftIndicator(currentShift, isTimerEnabled)
 
 // Эффект для планирования всех уведомлений из расписания
@@ -732,6 +734,8 @@ export default function Dashboard() {
         isLiveIslandEnabled={islandEnabled}
         onLiveIslandToggle={setIslandEnabled}
         onRequestLiveIslandPermission={requestIslandPermission}
+        onMoveLiveIsland={moveIslandBy}
+        onResetLiveIslandPosition={resetIslandPosition}
         liveIndicatorMode={liveIndicatorMode}
       />
 

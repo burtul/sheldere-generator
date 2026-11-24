@@ -29,6 +29,10 @@ export interface LiveShiftIndicator {
   requestIslandPermission: () => Promise<void>
   /** Перечитать состояние разрешения (например, после возврата в приложение). */
   refreshIslandStatus: () => Promise<void>
+  /** Сдвинуть островок на dx/dy в dp. */
+  moveIslandBy: (dx: number, dy: number) => Promise<void>
+  /** Вернуть островок по центру верхней кромки. */
+  resetIslandPosition: () => Promise<void>
 }
 
 const ISLAND_ENABLED_KEY = "liveIslandEnabled"
@@ -92,6 +96,22 @@ export function useLiveShiftIndicator(
       setIslandPermission(status.permission)
     } catch {
       // Плагин недоступен — оставляем уведомление как fallback.
+    }
+  }, [])
+
+  const moveIslandBy = useCallback(async (dx: number, dy: number) => {
+    try {
+      await LiveIsland.moveBy({ dx, dy })
+    } catch {
+      // Островок не запущен или плагин недоступен.
+    }
+  }, [])
+
+  const resetIslandPosition = useCallback(async () => {
+    try {
+      await LiveIsland.resetPosition()
+    } catch {
+      // Островок не запущен или плагин недоступен.
     }
   }, [])
 
@@ -233,5 +253,7 @@ export function useLiveShiftIndicator(
     setIslandEnabled,
     requestIslandPermission,
     refreshIslandStatus,
+    moveIslandBy,
+    resetIslandPosition,
   }
 }

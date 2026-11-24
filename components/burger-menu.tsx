@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
 import { isValidDate, isDateStringValid } from "@/lib/utils"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon, PictureInPictureAlt as LiveIslandIcon } from "@mui/icons-material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon, PictureInPictureAlt as LiveIslandIcon, OpenWith as IslandMoveIcon, ArrowUpward as ArrowUpIcon, ArrowDownward as ArrowDownIcon, ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, CenterFocusStrong as CenterFocusIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import VacationDialog from "./vacation-dialog"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
@@ -46,6 +46,10 @@ interface BurgerMenuProps {
   isLiveIslandEnabled?: boolean
   onLiveIslandToggle?: (enabled: boolean) => void
   onRequestLiveIslandPermission?: () => void
+  /** Сдвинуть островок на dx/dy в dp. */
+  onMoveLiveIsland?: (dx: number, dy: number) => void
+  /** Вернуть островок по центру верха. */
+  onResetLiveIslandPosition?: () => void
   /** Где сейчас показывается таймер. */
   liveIndicatorMode?: "island" | "notification" | "off"
 }
@@ -75,12 +79,14 @@ export default function BurgerMenu({
   isLiveIslandEnabled = true,
   onLiveIslandToggle,
   onRequestLiveIslandPermission,
+  onMoveLiveIsland,
+  onResetLiveIslandPosition,
   liveIndicatorMode = "off",
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
   const swipeIsBackdropRef = useRef(false)
-  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation">("main")
+  const [activeSection, setActiveSection] = useState<"main" | "colors" | "salary" | "visibility" | "schedule" | "vacation" | "timer">("main")
   const [baseDate, setBaseDate] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('baseDate');
@@ -108,6 +114,7 @@ export default function BurgerMenu({
   const [openClearDialog, setOpenClearDialog] = useState(false)
   const [localScheduleType, setLocalScheduleType] = useState(currentScheduleType)
   const [openVacationDialog, setOpenVacationDialog] = useState(false)
+  const [openIslandPositionDialog, setOpenIslandPositionDialog] = useState(false)
   const [localTimerEnabled, setLocalTimerEnabled] = useState(isTimerEnabled)
   const [localIslandEnabled, setLocalIslandEnabled] = useState(isLiveIslandEnabled)
 
@@ -256,6 +263,12 @@ export default function BurgerMenu({
         : liveIndicatorMode === "island"
           ? "Активен поверх приложений"
           : "Появится во время смены"
+
+  const timerMenuSecondaryText = !localTimerEnabled
+    ? "Выключен"
+    : isLiveIslandSupported && isLiveIslandPermissionGranted && localIslandEnabled
+      ? "Островок поверх приложений"
+      : "Уведомление в статус-баре"
 
   const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newType = event.target.value as "2x2" | "5days"
@@ -496,42 +509,15 @@ export default function BurgerMenu({
                 </ListItem>
 
 
-                {/* Timer Toggle */}
+                {/* Таймер и островок — одна секция */}
                 <ListItem disablePadding>
-                  <ListItemButton>
+                  <ListItemButton onClick={() => setActiveSection("timer")}>
                     <ListItemIcon>
-                      <ScheduleIcon color="action" />
+                      <ScheduleIcon color="primary" />
                     </ListItemIcon>
-                    <ListItemText primary="Таймер смены" secondary="Показывать время до конца смены" />
+                    <ListItemText primary="Таймер и островок" secondary={timerMenuSecondaryText} />
                   </ListItemButton>
-                  <Switch
-                    checked={localTimerEnabled}
-                    onChange={handleTimerToggle}
-                    color="primary"
-                    edge="end"
-                    sx={{ mr: 1 }}
-                  />
                 </ListItem>
-
-                {/* Live-островок в районе камеры */}
-                {isLiveIslandSupported && (
-                  <ListItem disablePadding>
-                    <ListItemButton onClick={handleIslandAction}>
-                      <ListItemIcon>
-                        <LiveIslandIcon color={isLiveIslandPermissionGranted && localIslandEnabled ? "primary" : "action"} />
-                      </ListItemIcon>
-                      <ListItemText primary="Островок смены" secondary={islandSecondaryText} />
-                    </ListItemButton>
-                    <Switch
-                      checked={localIslandEnabled && isLiveIslandPermissionGranted}
-                      onChange={handleIslandToggle}
-                      color="primary"
-                      edge="end"
-                      disabled={!isLiveIslandPermissionGranted}
-                      sx={{ mr: 1 }}
-                    />
-                  </ListItem>
-                )}
                 {/* Clear User Data */}
                 <ListItem disablePadding>
                   <ListItemButton onClick={handleOpenClearDialog}>
@@ -839,6 +825,128 @@ export default function BurgerMenu({
                 </Box>
               </Box>
             )}
+
+            {/* Timer & Live Island Section */}
+            {activeSection === "timer" && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Typography variant="h6">Таймер и островок</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Время до конца смены: в статус-баре или плавающей капсулой поверх приложений
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    p: 1.5,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                    <Box sx={{ width: 28, height: 28, backgroundColor: theme.palette.primary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ScheduleIcon sx={{ color: theme.palette.primary.contrastText, fontSize: 18 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="subtitle1">Таймер</Typography>
+                      <Typography variant="body2" color="text.secondary">Время до конца смены</Typography>
+                    </Box>
+                  </Box>
+                  <Switch checked={localTimerEnabled} onChange={handleTimerToggle} color="primary" />
+                </Box>
+
+                {isLiveIslandSupported ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1.5,
+                      p: 1.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                        <Box sx={{ width: 28, height: 28, backgroundColor: theme.palette.secondary.main, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <LiveIslandIcon sx={{ color: theme.palette.secondary.contrastText, fontSize: 18 }} />
+                        </Box>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="subtitle1">Островок</Typography>
+                          <Typography variant="body2" color="text.secondary">{islandSecondaryText}</Typography>
+                        </Box>
+                      </Box>
+                      <Switch
+                        checked={localIslandEnabled && isLiveIslandPermissionGranted}
+                        onChange={handleIslandToggle}
+                        color="primary"
+                        disabled={!isLiveIslandPermissionGranted || !localTimerEnabled}
+                      />
+                    </Box>
+                    {!isLiveIslandPermissionGranted && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleIslandAction}
+                        startIcon={<LiveIslandIcon />}
+                      >
+                        Разрешить показ поверх приложений
+                      </Button>
+                    )}
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Островок недоступен на этом устройстве — таймер показывается в уведомлении.
+                    </Typography>
+                  </Box>
+                )}
+
+                {isLiveIslandSupported && isLiveIslandPermissionGranted && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      p: 1.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Box sx={{ width: 28, height: 28, backgroundColor: theme.palette.action.selected, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <IslandMoveIcon sx={{ color: theme.palette.text.secondary, fontSize: 18 }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1">Положение</Typography>
+                        <Typography variant="body2" color="text.secondary">Перетащить или сдвинуть</Typography>
+                      </Box>
+                    </Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setOpenIslandPositionDialog(true)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      Настроить
+                    </Button>
+                  </Box>
+                )}
+
+                <Typography variant="caption" color="text.secondary">
+                  Островок появляется во время смены и остаётся поверх других приложений.
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
       </Drawer>
@@ -864,6 +972,73 @@ export default function BurgerMenu({
           </Button>
           <Button onClick={handleClearUserData} color="error" autoFocus>
             Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Положение live-островка */}
+      <Dialog
+        open={openIslandPositionDialog}
+        onClose={() => setOpenIslandPositionDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Положение островка</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Сдвигайте капсулу стрелками. Если она ниже строки статуса, её можно
+            перетаскивать пальцем — позиция сохранится. Изменения видны, пока
+            островок активен, то есть во время смены.
+          </DialogContentText>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, mt: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => onMoveLiveIsland?.(0, -10)}
+              sx={{ minWidth: 56 }}
+              aria-label="Сдвинуть островок вверх"
+            >
+              <ArrowUpIcon />
+            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={() => onMoveLiveIsland?.(-10, 0)}
+                sx={{ minWidth: 56 }}
+                aria-label="Сдвинуть островок влево"
+              >
+                <ArrowLeftIcon />
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => onResetLiveIslandPosition?.()}
+                sx={{ minWidth: 56 }}
+                aria-label="Вернуть островок по центру"
+              >
+                <CenterFocusIcon />
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => onMoveLiveIsland?.(10, 0)}
+                sx={{ minWidth: 56 }}
+                aria-label="Сдвинуть островок вправо"
+              >
+                <ArrowRightIcon />
+              </Button>
+            </Box>
+            <Button
+              variant="outlined"
+              onClick={() => onMoveLiveIsland?.(0, 10)}
+              sx={{ minWidth: 56 }}
+              aria-label="Сдвинуть островок вниз"
+            >
+              <ArrowDownIcon />
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenIslandPositionDialog(false)} color="primary">
+            Готово
           </Button>
         </DialogActions>
       </Dialog>
@@ -899,3 +1074,4 @@ export default function BurgerMenu({
     </ThemeProvider>
   )
 }
+

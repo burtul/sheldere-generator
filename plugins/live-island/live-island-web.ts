@@ -37,6 +37,14 @@ export class LiveIslandWeb extends WebPlugin implements LiveIslandPlugin {
     // В браузере островок не обновляется.
   }
 
+  async moveBy(_options: { dx: number; dy: number }): Promise<void> {
+    // В браузере двигать нечего.
+  }
+
+  async resetPosition(): Promise<void> {
+    // В браузере позиции нет.
+  }
+
   async hide(): Promise<void> {
     // В браузере скрывать нечего.
   }
