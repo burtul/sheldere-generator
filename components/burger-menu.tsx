@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import type { ScheduleData, GlobalSettings } from "@/lib/types"
 import { isValidDate, isDateStringValid } from "@/lib/utils"
 import { Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Box, Divider, TextField, Switch, Checkbox as MuiCheckbox, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from "@mui/material"
-import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon, PictureInPictureAlt as LiveIslandIcon, OpenWith as IslandMoveIcon, ArrowUpward as ArrowUpIcon, ArrowDownward as ArrowDownIcon, ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, CenterFocusStrong as CenterFocusIcon } from "@mui/icons-material"
+import { Palette as PaletteIcon, Calculate as CalculatorIcon, Close as CloseIcon, Note as NoteIcon, Logout as LogoutIcon, Visibility as VisibilityIcon, DarkMode as DarkModeIcon, LightMode as LightModeIcon, Delete as DeleteIcon, Info as InfoIcon, BarChart as BarChartIcon, List as ListIcon, Menu as MenuIcon, ArrowBack as ArrowBackIcon, Work as WorkIcon, Schedule as ScheduleIcon, BeachAccess as BeachAccessIcon, PictureInPictureAlt as LiveIslandIcon, OpenWith as IslandMoveIcon, ArrowUpward as ArrowUpIcon, ArrowDownward as ArrowDownIcon, ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, CenterFocusStrong as CenterFocusIcon, AutoAwesome as HyperIslandIcon } from "@mui/icons-material"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import VacationDialog from "./vacation-dialog"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
@@ -50,8 +50,14 @@ interface BurgerMenuProps {
   onMoveLiveIsland?: (dx: number, dy: number) => void
   /** Вернуть островок по центру верха. */
   onResetLiveIslandPosition?: () => void
+  /** Установлен ли Hyper Bridge. */
+  isHyperBridgeInstalled?: boolean
+  /** Включён ли режим Hyper Island. */
+  isHyperIslandEnabled?: boolean
+  onHyperIslandToggle?: (enabled: boolean) => void
+  onOpenHyperBridge?: () => void
   /** Где сейчас показывается таймер. */
-  liveIndicatorMode?: "island" | "notification" | "off"
+  liveIndicatorMode?: "hyper" | "island" | "notification" | "off"
 }
 
 export default function BurgerMenu({
@@ -81,6 +87,10 @@ export default function BurgerMenu({
   onRequestLiveIslandPermission,
   onMoveLiveIsland,
   onResetLiveIslandPosition,
+  isHyperBridgeInstalled = false,
+  isHyperIslandEnabled = false,
+  onHyperIslandToggle,
+  onOpenHyperBridge,
   liveIndicatorMode = "off",
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
@@ -117,6 +127,7 @@ export default function BurgerMenu({
   const [openIslandPositionDialog, setOpenIslandPositionDialog] = useState(false)
   const [localTimerEnabled, setLocalTimerEnabled] = useState(isTimerEnabled)
   const [localIslandEnabled, setLocalIslandEnabled] = useState(isLiveIslandEnabled)
+  const [localHyperEnabled, setLocalHyperEnabled] = useState(isHyperIslandEnabled)
 
 
   const colorPresets = {
@@ -148,6 +159,10 @@ export default function BurgerMenu({
   useEffect(() => {
     setLocalIslandEnabled(isLiveIslandEnabled)
   }, [isLiveIslandEnabled])
+
+  useEffect(() => {
+    setLocalHyperEnabled(isHyperIslandEnabled)
+  }, [isHyperIslandEnabled])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
@@ -254,6 +269,13 @@ export default function BurgerMenu({
     }
   }
 
+  const handleHyperToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation()
+    const newState = !localHyperEnabled
+    setLocalHyperEnabled(newState)
+    onHyperIslandToggle?.(newState)
+  }
+
   const islandSecondaryText = !isTimerEnabled
     ? "Сначала включите таймер смены"
     : !isLiveIslandPermissionGranted
@@ -266,9 +288,19 @@ export default function BurgerMenu({
 
   const timerMenuSecondaryText = !localTimerEnabled
     ? "Выключен"
-    : isLiveIslandSupported && isLiveIslandPermissionGranted && localIslandEnabled
-      ? "Островок поверх приложений"
-      : "Уведомление в статус-баре"
+    : isHyperBridgeInstalled && localHyperEnabled
+      ? "Hyper Island"
+      : isLiveIslandSupported && isLiveIslandPermissionGranted && localIslandEnabled
+        ? "Островок поверх приложений"
+        : "Уведомление в статус-баре"
+
+  const hyperSecondaryText = !isHyperBridgeInstalled
+    ? "Нужен Hyper Bridge из Google Play"
+    : !localHyperEnabled
+      ? "Выключен — работает наш островок"
+      : liveIndicatorMode === "hyper"
+        ? "Таймер в системном островке"
+        : "Появится во время смены"
 
   const handleScheduleTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newType = event.target.value as "2x2" | "5days"
@@ -875,17 +907,19 @@ export default function BurgerMenu({
                         </Box>
                         <Box sx={{ minWidth: 0 }}>
                           <Typography variant="subtitle1">Островок</Typography>
-                          <Typography variant="body2" color="text.secondary">{islandSecondaryText}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {localHyperEnabled ? "Заменён Hyper Island" : islandSecondaryText}
+                          </Typography>
                         </Box>
                       </Box>
                       <Switch
                         checked={localIslandEnabled && isLiveIslandPermissionGranted}
                         onChange={handleIslandToggle}
                         color="primary"
-                        disabled={!isLiveIslandPermissionGranted || !localTimerEnabled}
+                        disabled={localHyperEnabled || !isLiveIslandPermissionGranted || !localTimerEnabled}
                       />
                     </Box>
-                    {!isLiveIslandPermissionGranted && (
+                    {!isLiveIslandPermissionGranted && !localHyperEnabled && (
                       <Button
                         size="small"
                         variant="outlined"
@@ -910,7 +944,48 @@ export default function BurgerMenu({
                   </Box>
                 )}
 
-                {isLiveIslandSupported && isLiveIslandPermissionGranted && (
+                {/* Hyper Island через Hyper Bridge */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    p: 1.5,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                      <Box sx={{ width: 28, height: 28, backgroundColor: isHyperBridgeInstalled ? theme.palette.warning.main : theme.palette.action.selected, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <HyperIslandIcon sx={{ color: isHyperBridgeInstalled ? theme.palette.warning.contrastText : theme.palette.text.secondary, fontSize: 18 }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1">Hyper Island</Typography>
+                        <Typography variant="body2" color="text.secondary">{hyperSecondaryText}</Typography>
+                      </Box>
+                    </Box>
+                    <Switch
+                      checked={localHyperEnabled}
+                      onChange={handleHyperToggle}
+                      color="primary"
+                      disabled={!isHyperBridgeInstalled}
+                    />
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={onOpenHyperBridge}
+                    startIcon={<HyperIslandIcon />}
+                  >
+                    {isHyperBridgeInstalled ? "Открыть Hyper Bridge" : "Установить Hyper Bridge"}
+                  </Button>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  В Hyper Bridge включите «График смен» и разрешите доступ к уведомлениям.
+                </Typography>
+
+                {!localHyperEnabled && isLiveIslandSupported && isLiveIslandPermissionGranted && (
                   <Box
                     sx={{
                       display: 'flex',

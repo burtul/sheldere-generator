@@ -155,6 +155,10 @@ export default function Dashboard() {
     requestIslandPermission,
     moveIslandBy,
     resetIslandPosition,
+    hyperBridgeInstalled,
+    hyperEnabled,
+    setHyperEnabled,
+    openHyperBridge,
   } = useLiveShiftIndicator(currentShift, isTimerEnabled)
 
 // Эффект для планирования всех уведомлений из расписания
@@ -736,6 +740,10 @@ export default function Dashboard() {
         onRequestLiveIslandPermission={requestIslandPermission}
         onMoveLiveIsland={moveIslandBy}
         onResetLiveIslandPosition={resetIslandPosition}
+        isHyperBridgeInstalled={hyperBridgeInstalled}
+        isHyperIslandEnabled={hyperEnabled}
+        onHyperIslandToggle={setHyperEnabled}
+        onOpenHyperBridge={openHyperBridge}
         liveIndicatorMode={liveIndicatorMode}
       />
 

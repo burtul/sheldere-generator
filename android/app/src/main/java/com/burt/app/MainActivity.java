@@ -4,6 +4,7 @@ import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 import com.burt.app.ForegroundServicePlugin;
 import com.burt.app.LiveIslandPlugin;
+import com.burt.app.HyperIslandPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -13,6 +14,7 @@ public class MainActivity extends BridgeActivity {
         // в него уже не попадает.
         registerPlugin(ForegroundServicePlugin.class);
         registerPlugin(LiveIslandPlugin.class);
+        registerPlugin(HyperIslandPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

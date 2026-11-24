@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Android 11+: без этого блока не видно установленный Hyper Bridge. -->
+    <queries>
+        <package android:name="com.d4viddf.hyperbridge" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -51,6 +56,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="live_island_shift_timer" />
+        </service>
+
+        <!-- Таймер для системного Hyper Island через Hyper Bridge. -->
+        <service
+            android:name=".HyperIslandService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="hyper_island_shift_timer" />
         </service>
     </application>
 
