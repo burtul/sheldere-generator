@@ -44,7 +44,7 @@ public class ForegroundServicePlugin extends Plugin {
             channel.setDescription(CHANNEL_DESCRIPTION);
             channel.setSound(null, null);
             channel.setVibrationPattern(new long[]{0});
-            channel.setVibrationEnabled(false);
+            channel.setVibratePattern(new long[]{0, 0});
             notificationManager.createNotificationChannel(channel);
         }
     }
