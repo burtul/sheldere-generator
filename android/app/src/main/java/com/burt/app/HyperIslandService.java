@@ -6,8 +6,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -17,17 +15,12 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 /**
- * Уведомление-таймер для Hyper Island (Xiaomi HyperOS) через Hyper Bridge.
+ * Уведомление-таймер для Hyper Island (Xiaomi HyperOS).
  *
- * Hyper Bridge превращает обычные Android-уведомления в системный островок.
- * Чтобы уведомление распозналось как таймер, нужны:
- *  - заголовок (Hyper Bridge берёт его как подпись);
- *  - {@code setUsesChronometer(true)} (флаг EXTRA_SHOW_CHRONOMETER);
- *  - {@code setWhen(endsAt)} с моментом окончания в будущем — по нему
- *    Hyper Bridge строит обратный отсчёт.
- *
- * Своего окна сервис не рисует: Hyper Island показывает системный островок.
- * Когда время выходит, сервис останавливается и уведомление исчезает.
+ * HyperOS рисует системный островок только для focus-уведомлений, отправленных
+ * через NotificationManager.notify() с достаточно высоким каналом. Поэтому
+ * сервис держит процесс через foreground-сервис с тихим служебным
+ * уведомлением, а сам таймер публикует отдельным уведомлением.
  */
 public class HyperIslandService extends Service {
 
@@ -36,16 +29,20 @@ public class HyperIslandService extends Service {
     public static final String ACTION_STOP = "com.burt.app.action.HYPER_ISLAND_STOP";
 
     public static final String EXTRA_ENDS_AT = "endsAt";
+    public static final String EXTRA_TEXT_MODE = "textMode";
 
     /** Доступно плагину, чтобы отвечать на isRunning без биндинга. */
     public static volatile boolean isRunning = false;
 
-    private static final String CHANNEL_ID = "shift_hyper_island_channel";
-    private static final String CHANNEL_NAME = "Таймер в Hyper Island";
-    private static final String CHANNEL_DESCRIPTION = "Обратный отсчёт смены для системного островка HyperOS";
-    private static final int NOTIFICATION_ID = 1003;
+    private static final String SERVICE_CHANNEL_ID = "shift_hyper_island_service_channel";
+    private static final String FOCUS_CHANNEL_ID = "shift_hyper_island_channel_v2";
+
+    private static final int SERVICE_NOTIFICATION_ID = 1004;
+    private static final int TIMER_NOTIFICATION_ID = 1003;
 
     private long endsAtMs = 0L;
+    private boolean textMode = false;
+    private NotificationManager notificationManager;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable stopAtEnd = new Runnable() {
@@ -54,11 +51,22 @@ public class HyperIslandService extends Service {
             stopSelf();
         }
     };
+    private final Runnable updateTicker = new Runnable() {
+        @Override
+        public void run() {
+            if (!textMode || endsAtMs <= System.currentTimeMillis()) {
+                return;
+            }
+            postTimerNotification();
+            handler.postDelayed(this, 60_000L);
+        }
+    };
 
     @Override
     public void onCreate() {
         super.onCreate();
-        createNotificationChannel();
+        notificationManager = getSystemService(NotificationManager.class);
+        createChannels();
         isRunning = true;
     }
 
@@ -74,6 +82,9 @@ public class HyperIslandService extends Service {
         if (intent.hasExtra(EXTRA_ENDS_AT)) {
             endsAtMs = intent.getLongExtra(EXTRA_ENDS_AT, 0L);
         }
+        if (intent.hasExtra(EXTRA_TEXT_MODE)) {
+            textMode = intent.getBooleanExtra(EXTRA_TEXT_MODE, false);
+        }
 
         if (ACTION_STOP.equals(action)) {
             stopSelf();
@@ -81,72 +92,111 @@ public class HyperIslandService extends Service {
         }
 
         if (endsAtMs <= System.currentTimeMillis()) {
-            // Смена уже закончилась — показывать нечего.
             stopSelf();
             return START_NOT_STICKY;
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification());
+        // Foreground-сервис нужен, чтобы система не убила процесс; само
+        // уведомление-таймер публикуется отдельно через notify().
+        startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
+        postTimerNotification();
         scheduleStopAtEnd();
+        scheduleTextUpdates();
 
         return START_NOT_STICKY;
     }
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription(CHANNEL_DESCRIPTION);
-            channel.setSound(null, null);
-            channel.enableVibration(false);
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+    private void createChannels() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || notificationManager == null) {
+            return;
         }
+
+        NotificationChannel focusChannel = new NotificationChannel(
+            FOCUS_CHANNEL_ID,
+            "Таймер в Hyper Island",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        focusChannel.setDescription("Обратный отсчёт смены для системного островка HyperOS");
+        focusChannel.setSound(null, null);
+        focusChannel.enableVibration(false);
+        focusChannel.setShowBadge(false);
+        notificationManager.createNotificationChannel(focusChannel);
+
+        NotificationChannel serviceChannel = new NotificationChannel(
+            SERVICE_CHANNEL_ID,
+            "Служба таймера Hyper Island",
+            NotificationManager.IMPORTANCE_MIN
+        );
+        serviceChannel.setDescription("Невидимое служебное уведомление foreground-сервиса");
+        serviceChannel.setSound(null, null);
+        serviceChannel.enableVibration(false);
+        serviceChannel.setShowBadge(false);
+        notificationManager.createNotificationChannel(serviceChannel);
     }
 
-    private Notification buildNotification() {
+    private Notification buildServiceNotification() {
         Intent openIntent = new Intent(this, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent contentIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        return new NotificationCompat.Builder(this, SERVICE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_calendar)
+            .setContentTitle("Таймер смены")
+            .setContentText("Сервис активен")
+            .setContentIntent(contentIntent)
+            .setOngoing(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .build();
+    }
+
+    private void postTimerNotification() {
+        Intent openIntent = new Intent(this, MainActivity.class);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        PendingIntent contentIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Notification notification = HyperIslandNotifier.buildTimerNotification(
+            this,
+            FOCUS_CHANNEL_ID,
+            endsAtMs,
+            contentIntent,
+            textMode
+        );
+
+        if (notification == null) {
+            notification = buildFallbackNotification(contentIntent);
         }
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openIntent, pendingFlags);
 
-        // На HyperOS 3+ собираем нативный focus-notification: островок рисует
-        // сама система, Hyper Bridge не нужен.
-        Notification nativeIsland =
-            HyperIslandNotifier.buildTimerNotification(this, CHANNEL_ID, endsAtMs, contentIntent);
-        if (nativeIsland != null) {
-            return nativeIsland;
-        }
+        notificationManager.notify(TIMER_NOTIFICATION_ID, notification);
+    }
 
-        Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
-
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+    private Notification buildFallbackNotification(PendingIntent contentIntent) {
+        return new NotificationCompat.Builder(this, FOCUS_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_calendar)
             .setContentTitle("Таймер смены")
             .setContentText("До конца смены")
-            .setSmallIcon(R.drawable.ic_notification_calendar)
-            .setLargeIcon(largeIcon)
             .setContentIntent(contentIntent)
             .setWhen(endsAtMs)
             .setShowWhen(true)
-            // Эти три поля превращают уведомление в таймер для Hyper Bridge.
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build();
     }
 
@@ -158,9 +208,20 @@ public class HyperIslandService extends Service {
         }
     }
 
+    private void scheduleTextUpdates() {
+        handler.removeCallbacks(updateTicker);
+        if (textMode && endsAtMs > System.currentTimeMillis()) {
+            handler.postDelayed(updateTicker, 60_000L);
+        }
+    }
+
     @Override
     public void onDestroy() {
         handler.removeCallbacks(stopAtEnd);
+        handler.removeCallbacks(updateTicker);
+        if (notificationManager != null) {
+            notificationManager.cancel(TIMER_NOTIFICATION_ID);
+        }
         isRunning = false;
         stopForeground(true);
         super.onDestroy();

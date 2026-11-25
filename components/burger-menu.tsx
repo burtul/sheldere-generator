@@ -60,6 +60,7 @@ interface BurgerMenuProps {
   isHyperIslandEnabled?: boolean
   onHyperIslandToggle?: (enabled: boolean) => void
   onOpenHyperBridge?: () => void
+  onOpenHyperNotificationSettings?: () => void
   /** Где сейчас показывается таймер. */
   liveIndicatorMode?: "hyper" | "island" | "notification" | "off"
 }
@@ -97,6 +98,7 @@ export default function BurgerMenu({
   isHyperIslandEnabled = false,
   onHyperIslandToggle,
   onOpenHyperBridge,
+  onOpenHyperNotificationSettings,
   liveIndicatorMode = "off",
 }: BurgerMenuProps) {
   const { globalSettings } = scheduleData;
@@ -308,7 +310,9 @@ export default function BurgerMenu({
       ? "Выключен — работает наш островок"
       : liveIndicatorMode === "hyper"
         ? isHyperNativeSupported
-          ? "Таймер в системном островке"
+          ? isHyperFocusAllowed
+            ? "Таймер в системном островке"
+            : "Включите Focus-уведомления"
           : "Таймер через Hyper Bridge"
         : "Появится во время смены"
 
@@ -982,6 +986,16 @@ export default function BurgerMenu({
                       disabled={!hyperAvailable}
                     />
                   </Box>
+                  {isHyperNativeSupported && !isHyperFocusAllowed && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={onOpenHyperNotificationSettings}
+                      startIcon={<HyperIslandIcon />}
+                    >
+                      Разрешить Focus-уведомления
+                    </Button>
+                  )}
                   {!isHyperNativeSupported && (
                     <Button
                       size="small"
@@ -996,8 +1010,8 @@ export default function BurgerMenu({
                 <Typography variant="caption" color="text.secondary">
                   {isHyperNativeSupported
                     ? isHyperFocusAllowed
-                      ? "Островок рисует HyperOS — Hyper Bridge не нужен."
-                      : "Разрешите уведомления и показ в строке состояния HyperOS."
+                      ? "HyperOS · Focus-уведомления разрешены — островок рисует система."
+                      : "HyperOS · включите «Focus notifications» в настройках уведомлений приложения."
                     : "В Hyper Bridge включите «График смен» и разрешите доступ к уведомлениям."}
                 </Typography>
 

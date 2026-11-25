@@ -60,11 +60,39 @@ public class HyperIslandPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        Context context = context();
+        if (context == null) {
+            call.reject("Контекст недоступен", "NO_CONTEXT");
+            return;
+        }
+
+        Intent intent = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            context.startActivity(intent);
+        } catch (Exception error) {
+            call.reject("Не удалось открыть настройки уведомлений", "SETTINGS_UNAVAILABLE");
+            return;
+        }
+
+        call.resolve();
+    }
+
+    @PluginMethod
     public void previewPayload(PluginCall call) {
         Long endsAt = call.getLong("endsAt", System.currentTimeMillis() + 3_600_000L);
         try {
             JSObject result = new JSObject();
-            result.put("payload", HyperIslandNotifier.buildPayloadPreview(endsAt));
+            result.put(
+                "payload",
+                HyperIslandNotifier.buildPayloadPreview(
+                    endsAt,
+                    call.getBoolean("textMode", false)
+                )
+            );
             call.resolve(result);
         } catch (Exception error) {
             call.reject("Не удалось собрать payload", "PAYLOAD_FAILED");
@@ -78,6 +106,9 @@ public class HyperIslandPlugin extends Plugin {
         result.put("deviceSupported", isXiaomiDevice());
         result.put("nativeSupported", HyperIslandNotifier.isSupported(context()));
         result.put("focusAllowed", HyperIslandNotifier.hasFocusPermission(context()));
+        result.put("islandFeature", HyperIslandNotifier.isIslandFeatureEnabled());
+        result.put("manufacturer", Build.MANUFACTURER);
+        result.put("model", Build.MODEL);
         result.put("running", HyperIslandService.isRunning);
         call.resolve(result);
     }
@@ -93,6 +124,7 @@ public class HyperIslandPlugin extends Plugin {
         Intent intent = new Intent(context(), HyperIslandService.class);
         intent.setAction(HyperIslandService.ACTION_START);
         intent.putExtra(HyperIslandService.EXTRA_ENDS_AT, endsAt.longValue());
+        intent.putExtra(HyperIslandService.EXTRA_TEXT_MODE, call.getBoolean("textMode", false));
 
         try {
             ContextCompat.startForegroundService(context(), intent);
@@ -115,6 +147,7 @@ public class HyperIslandPlugin extends Plugin {
         Intent intent = new Intent(context(), HyperIslandService.class);
         intent.setAction(HyperIslandService.ACTION_UPDATE);
         intent.putExtra(HyperIslandService.EXTRA_ENDS_AT, endsAt.longValue());
+        intent.putExtra(HyperIslandService.EXTRA_TEXT_MODE, call.getBoolean("textMode", false));
 
         try {
             if (HyperIslandService.isRunning) {

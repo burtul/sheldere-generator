@@ -23,8 +23,11 @@ import java.util.Locale;
  * Здесь этот payload собирается напрямую, без сторонних библиотек и без
  * Hyper Bridge.
  *
- * Используется шаблон чата с таймером: система сама ведёт обратный отсчёт
- * до `timerWhen`, поэтому обновлять уведомление каждую минуту не нужно.
+ * Есть два режима:
+ *  - нативный таймер (TimerInfo) — система сама ведёт отсчёт;
+ *  - текстовый отсчёт — для смен, переходящих через полночь: HyperOS
+ *    не ведёт такой таймер через сутки, поэтому сервис обновляет текст
+ *    раз в минуту.
  */
 public final class HyperIslandNotifier {
 
@@ -33,26 +36,44 @@ public final class HyperIslandNotifier {
     private static final String FOCUS_PARAM = "miui.focus.param";
     private static final String FOCUS_PICS = "miui.focus.pics";
     private static final String TITLE = "Таймер смены";
+    private static final String CAPTION = "До конца смены";
 
     private HyperIslandNotifier() {
     }
 
     /** Поддерживает ли прошивка нативные focus notifications. */
     public static boolean isSupported(Context context) {
-        return isXiaomiDevice() && isIslandFeatureEnabled();
+        // Намеренно не проверяем persist.sys.feature.island через reflection:
+        // на Android 14+ скрытый API может быть заблокирован, и тогда
+        // Hyper Island ошибочно считался бы неподдерживаемым. Если HyperOS
+        // не умеет focus-уведомления, payload просто проигнорируется.
+        return isXiaomiDevice();
     }
 
-    /**
-     * Собирает уведомление с нативным островком-таймером.
-     * Возвращает null, если HyperOS не поддерживается или смена уже кончилась.
-     */
     public static Notification buildTimerNotification(
         Context context,
         String channelId,
         long endsAt,
         PendingIntent contentIntent
     ) {
-        if (!isSupported(context)) {
+        return buildTimerNotification(context, channelId, endsAt, contentIntent, false);
+    }
+
+    /**
+     * Собирает уведомление с нативным островком.
+     *
+     * @param textMode true — текстовый отсчёт для смен через полночь,
+     *                 false — нативный таймер HyperOS.
+     */
+    public static Notification buildTimerNotification(
+        Context context,
+        String channelId,
+        long endsAt,
+        PendingIntent contentIntent,
+        boolean textMode
+    ) {
+        if (!isSupported(context) || !hasFocusPermission(context)) {
+            // Без разрешения Focus notifications HyperOS проигнорирует payload.
             return null;
         }
 
@@ -62,7 +83,8 @@ public final class HyperIslandNotifier {
         }
 
         try {
-            String param = buildParam(endsAt, now);
+            String remaining = formatRemaining(endsAt - now);
+            String param = buildParam(endsAt, now, textMode);
 
             Bundle pictures = new Bundle();
             pictures.putParcelable(
@@ -76,11 +98,13 @@ public final class HyperIslandNotifier {
             Notification notification = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_notification_calendar)
                 .setContentTitle(TITLE)
-                .setContentText("До конца смены")
+                .setContentText(CAPTION + ": " + remaining)
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setSilent(true)
+                .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addExtras(focusExtras)
                 .build();
 
@@ -94,15 +118,15 @@ public final class HyperIslandNotifier {
 
     /** Отдаёт JSON-payload для диагностики (не зависит от поддержки устройства). */
     public static String buildPayloadPreview(long endsAt) throws Exception {
-        return buildParam(endsAt, System.currentTimeMillis());
+        return buildPayloadPreview(endsAt, false);
     }
 
-    private static String buildParam(long endsAt, long now) throws Exception {        JSONObject timer = new JSONObject()
-            .put("timerType", -1)
-            .put("timerWhen", endsAt)
-            .put("timerTotal", endsAt - now)
-            .put("timerSystemCurrent", now);
+    /** Отдаёт JSON-payload для диагностики с выбором режима. */
+    public static String buildPayloadPreview(long endsAt, boolean textMode) throws Exception {
+        return buildParam(endsAt, System.currentTimeMillis(), textMode);
+    }
 
+    private static String buildParam(long endsAt, long now, boolean textMode) throws Exception {
         JSONObject picture = new JSONObject()
             .put("type", 1)
             .put("pic", PICTURE_KEY)
@@ -110,14 +134,36 @@ public final class HyperIslandNotifier {
             .put("autoplay", false)
             .put("number", 0);
 
-        JSONObject bigIsland = new JSONObject()
-            .put("imageTextInfoLeft", new JSONObject()
-                .put("type", 1)
-                .put("picInfo", picture))
-            .put("sameWidthDigitInfo", new JSONObject()
+        JSONObject imageTextLeft = new JSONObject()
+            .put("type", 1)
+            .put("picInfo", picture);
+
+        JSONObject bigIsland = new JSONObject().put("imageTextInfoLeft", imageTextLeft);
+        JSONObject chatInfo = new JSONObject()
+            .put("type", 1)
+            .put("title", TITLE)
+            .put("picProfile", PICTURE_KEY);
+
+        if (textMode) {
+            // Текстовый отсчёт: обновляется сервисом раз в минуту.
+            String remaining = formatRemaining(endsAt - now);
+            bigIsland.put("textInfo", new JSONObject()
+                .put("title", CAPTION)
+                .put("content", remaining)
+                .put("showHighlightColor", false));
+            chatInfo.put("content", CAPTION + ": " + remaining);
+        } else {
+            JSONObject timer = new JSONObject()
+                .put("timerType", -1)
+                .put("timerWhen", endsAt)
+                .put("timerTotal", endsAt - now)
+                .put("timerSystemCurrent", now);
+            bigIsland.put("sameWidthDigitInfo", new JSONObject()
                 .put("timerInfo", timer)
                 .put("showHighlightColor", true)
                 .put("turnAnim", false));
+            chatInfo.put("timerInfo", timer);
+        }
 
         JSONObject paramIsland = new JSONObject()
             .put("islandProperty", 1)
@@ -128,12 +174,6 @@ public final class HyperIslandNotifier {
             .put("needCloseAnimation", true)
             .put("bigIslandArea", bigIsland)
             .put("smallIslandArea", new JSONObject().put("picInfo", picture));
-
-        JSONObject chatInfo = new JSONObject()
-            .put("type", 1)
-            .put("title", TITLE)
-            .put("picProfile", PICTURE_KEY)
-            .put("timerInfo", timer);
 
         JSONObject paramV2 = new JSONObject()
             .put("protocol", 3)
@@ -150,6 +190,14 @@ public final class HyperIslandNotifier {
             .put("param_v2", paramV2)
             .put("isShowNotification", true)
             .toString();
+    }
+
+    /** Формат HH:MM из миллисекунд. */
+    public static String formatRemaining(long leftMs) {
+        long totalMinutes = Math.max(0L, leftMs) / 60_000L;
+        long hours = totalMinutes / 60L;
+        long minutes = totalMinutes % 60L;
+        return String.format(Locale.US, "%02d:%02d", hours, minutes);
     }
 
     private static boolean isXiaomiDevice() {
@@ -181,7 +229,7 @@ public final class HyperIslandNotifier {
     }
 
     /** Системное свойство persist.sys.feature.island включает Hyper Island. */
-    private static boolean isIslandFeatureEnabled() {
+    public static boolean isIslandFeatureEnabled() {
         try {
             Class<?> systemProperties = Class.forName("android.os.SystemProperties");
             Method getBoolean = systemProperties.getDeclaredMethod(

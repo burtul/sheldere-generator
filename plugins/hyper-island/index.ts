@@ -21,6 +21,11 @@ export interface HyperIslandAvailability {
   nativeSupported: boolean
   /** Разрешила ли система focus-уведомления этому приложению. */
   focusAllowed: boolean
+  /** Включён ли системный Hyper Island (persist.sys.feature.island). */
+  islandFeature: boolean
+  /** Производитель и модель — для диагностики. */
+  manufacturer: string
+  model: string
   /** Запущен ли сейчас таймер Hyper Island. */
   running: boolean
 }
@@ -30,16 +35,19 @@ export interface HyperIslandPlugin {
   isAvailable(): Promise<HyperIslandAvailability>
 
   /** Запустить таймер до `endsAt` (epoch ms). */
-  start(options: { endsAt: number }): Promise<void>
+  start(options: { endsAt: number; textMode?: boolean }): Promise<void>
 
   /** Обновить время окончания таймера. */
-  update(options: { endsAt: number }): Promise<void>
+  update(options: { endsAt: number; textMode?: boolean }): Promise<void>
 
   /** Остановить таймер и убрать уведомление. */
   stop(): Promise<void>
 
   /** Открыть Hyper Bridge (или его страницу в Google Play). */
   openHyperBridge(): Promise<void>
+
+  /** Открыть системные настройки уведомлений приложения. */
+  openNotificationSettings(): Promise<void>
 }
 
 export const HyperIsland = registerPlugin<HyperIslandPlugin>("HyperIsland", {

@@ -6,6 +6,9 @@ const UNAVAILABLE: HyperIslandAvailability = {
   deviceSupported: false,
   nativeSupported: false,
   focusAllowed: false,
+  islandFeature: false,
+  manufacturer: "",
+  model: "",
   running: false,
 }
 
@@ -15,11 +18,11 @@ export class HyperIslandWeb extends WebPlugin implements HyperIslandPlugin {
     return { ...UNAVAILABLE }
   }
 
-  async start(_options: { endsAt: number }): Promise<void> {
+  async start(_options: { endsAt: number; textMode?: boolean }): Promise<void> {
     // В браузере таймер Hyper Island не запускается.
   }
 
-  async update(_options: { endsAt: number }): Promise<void> {
+  async update(_options: { endsAt: number; textMode?: boolean }): Promise<void> {
     // В браузере обновлять нечего.
   }
 
@@ -31,5 +34,9 @@ export class HyperIslandWeb extends WebPlugin implements HyperIslandPlugin {
     if (typeof window !== "undefined") {
       window.open("https://play.google.com/store/apps/details?id=com.d4viddf.hyperbridge", "_blank")
     }
+  }
+
+  async openNotificationSettings(): Promise<void> {
+    // В браузере нет системных настроек уведомлений приложения.
   }
 }

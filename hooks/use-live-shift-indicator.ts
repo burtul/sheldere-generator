@@ -6,6 +6,7 @@ import { ForegroundService } from "@/plugins/foreground-service"
 import { LiveIsland, getLiveIslandStatus, hideLiveIsland } from "@/plugins/live-island"
 import { HyperIsland } from "@/plugins/hyper-island"
 import {
+  crossesMidnight,
   formatRemaining,
   getActiveShiftWindow,
   getRemainingMinutes,
@@ -48,6 +49,8 @@ export interface LiveShiftIndicator {
   setHyperEnabled: (enabled: boolean) => void
   /** Открыть Hyper Bridge или его страницу в Google Play. */
   openHyperBridge: () => Promise<void>
+  /** Открыть настройки уведомлений приложения (HyperOS). */
+  openHyperNotificationSettings: () => Promise<void>
 }
 
 const ISLAND_ENABLED_KEY = "liveIslandEnabled"
@@ -75,7 +78,11 @@ function readIslandEnabled(): boolean {
 export function useLiveShiftIndicator(
   currentShift: Shift | null,
   isEnabled: boolean = true,
+  activeShift?: Shift | null,
 ): LiveShiftIndicator {
+  // Для островка и Hyper Island важна смена, которая идёт сейчас,
+  // включая ночную, начавшуюся вчера.
+  const indicatorShift = activeShift ?? currentShift
   const [mode, setMode] = useState<LiveIndicatorMode>("off")
   const [islandSupported, setIslandSupported] = useState(false)
   const [islandPermission, setIslandPermission] = useState(false)
@@ -182,6 +189,14 @@ export function useLiveShiftIndicator(
     }
   }, [])
 
+  const openHyperNotificationSettings = useCallback(async () => {
+    try {
+      await HyperIsland.openNotificationSettings()
+    } catch {
+      // Настройки недоступны — ничего страшного.
+    }
+  }, [])
+
   // Первичная проверка окружения.
   useEffect(() => {
     void refreshIslandStatus()
@@ -211,7 +226,7 @@ export function useLiveShiftIndicator(
   useEffect(() => {
     const isNative = typeof window !== "undefined" && Capacitor.isNativePlatform()
 
-    if (!isNative || !isEnabled || !currentShift) {
+    if (!isNative || !isEnabled || (!currentShift && !activeShift)) {
       void hideLiveIsland()
       void HyperIsland.stop().catch(() => {})
       void ForegroundService.stopTimerService().catch(() => {})
@@ -232,7 +247,7 @@ export function useLiveShiftIndicator(
       void ForegroundService.stopTimerService().catch(() => {})
 
       const syncHyper = async () => {
-        const shiftWindow = getActiveShiftWindow(currentShift, new Date())
+        const shiftWindow = getActiveShiftWindow(indicatorShift, new Date())
 
         if (!shiftWindow) {
           if (startedEndsAt !== null) {
@@ -244,13 +259,16 @@ export function useLiveShiftIndicator(
         }
 
         const endsAt = shiftWindow.end.getTime()
+        // HyperOS не ведёт нативный таймер через полночь, поэтому для
+        // ночных смен обновляем текстовый отсчёт раз в минуту.
+        const textMode = crossesMidnight(shiftWindow.start, shiftWindow.end)
 
         try {
           if (startedEndsAt === null) {
-            await HyperIsland.start({ endsAt })
+            await HyperIsland.start({ endsAt, textMode })
             startedEndsAt = endsAt
           } else if (startedEndsAt !== endsAt) {
-            await HyperIsland.update({ endsAt })
+            await HyperIsland.update({ endsAt, textMode })
             startedEndsAt = endsAt
           }
           if (alive) setMode("hyper")
@@ -281,7 +299,7 @@ export function useLiveShiftIndicator(
       void ForegroundService.stopTimerService().catch(() => {})
 
       const syncIsland = async () => {
-        const shiftWindow = getActiveShiftWindow(currentShift, new Date())
+        const shiftWindow = getActiveShiftWindow(indicatorShift, new Date())
 
         if (!shiftWindow) {
           // Смена ещё не началась или уже закончилась — островок не нужен.
@@ -338,7 +356,8 @@ export function useLiveShiftIndicator(
     void HyperIsland.stop().catch(() => {})
 
     const syncNotification = () => {
-      const shiftWindow = getShiftWindow(currentShift, new Date())
+      const shiftForNotification = indicatorShift ?? currentShift
+      const shiftWindow = getShiftWindow(shiftForNotification, new Date())
 
       if (!shiftWindow) {
         if (started) {
@@ -372,6 +391,7 @@ export function useLiveShiftIndicator(
     }
   }, [
     currentShift,
+    activeShift,
     isEnabled,
     islandEnabled,
     islandPermission,
@@ -379,6 +399,7 @@ export function useLiveShiftIndicator(
     hyperEnabled,
     hyperBridgeInstalled,
     hyperNativeSupported,
+    hyperFocusAllowed,
   ])
 
   return {
@@ -398,5 +419,6 @@ export function useLiveShiftIndicator(
     hyperEnabled,
     setHyperEnabled,
     openHyperBridge,
+    openHyperNotificationSettings,
   }
 }

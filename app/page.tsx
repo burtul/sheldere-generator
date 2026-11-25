@@ -21,6 +21,7 @@ import { toast } from "sonner"
 import { calculateVacationDaysWithHolidays } from "@/lib/vacation-utils"
 import { checkNotifications, scheduleNotification, scheduleAllNotificationsFromSchedule, cancelNotification } from "@/lib/notification-utils"
 import { useLiveShiftIndicator } from "@/hooks/use-live-shift-indicator"
+import { findActiveShift } from "@/lib/shift-timing"
 
 import {
   applyVisibleVacationsToSchedule,
@@ -145,6 +146,12 @@ export default function Dashboard() {
     return scheduleData.shifts.get(currentDate) || null
   }, [scheduleData, currentDate])
 
+  // Смена, которая реально идёт сейчас (ночная может начаться вчера).
+  const activeShift = useMemo(() => {
+    if (!scheduleData) return null
+    return findActiveShift(scheduleData.shifts, new Date())
+  }, [scheduleData, currentDate])
+
   // Live-индикатор смены: островок поверх приложений или foreground-уведомление.
   const {
     mode: liveIndicatorMode,
@@ -161,7 +168,8 @@ export default function Dashboard() {
     hyperEnabled,
     setHyperEnabled,
     openHyperBridge,
-  } = useLiveShiftIndicator(currentShift, isTimerEnabled)
+    openHyperNotificationSettings,
+  } = useLiveShiftIndicator(currentShift, isTimerEnabled, activeShift)
 
 // Эффект для планирования всех уведомлений из расписания
    useEffect(() => {
@@ -748,6 +756,7 @@ export default function Dashboard() {
         isHyperIslandEnabled={hyperEnabled}
         onHyperIslandToggle={setHyperEnabled}
         onOpenHyperBridge={openHyperBridge}
+        onOpenHyperNotificationSettings={openHyperNotificationSettings}
         liveIndicatorMode={liveIndicatorMode}
       />
 
