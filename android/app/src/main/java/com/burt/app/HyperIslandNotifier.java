@@ -146,11 +146,10 @@ public final class HyperIslandNotifier {
 
         if (textMode) {
             // Текстовый отсчёт: обновляется сервисом раз в минуту.
-            // HyperOS рисует у textInfo только title, поэтому там время без подписи.
+            // HyperOS рисует у textInfo и title, и content, поэтому время — только в title.
             String remaining = formatRemaining(endsAt - now);
             bigIsland.put("textInfo", new JSONObject()
                 .put("title", remaining)
-                .put("content", remaining)
                 .put("showHighlightColor", false));
             chatInfo.put("content", remaining);
         } else {
